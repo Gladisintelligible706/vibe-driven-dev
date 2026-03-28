@@ -4,15 +4,24 @@
   "description": "The missing pre-execution layer for AI coding agents. Vibe Driven Dev turns messy ideas into structured plans, stack decisions, AI model choices, bootstrap files, and handoff-ready workflows.",
   "type": "module",
   "bin": {
-    "vdd": "./dist/cli/src/index.js",
-    "vibe-driven-dev": "./dist/cli/src/index.js"
+    "vibe-driven-dev": "dist/cli/src/index.js"
   },
-  "main": "./dist/cli/src/index.js",
+  "main": "dist/cli/src/index.js",
   "files": [
+    "agents",
     "dist",
+    "templates",
     "README.md",
     "LICENSE"
   ],
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/OpenOps-Studio/vibe-driven-dev.git"
+  },
+  "homepage": "https://github.com/OpenOps-Studio/vibe-driven-dev#readme",
+  "bugs": {
+    "url": "https://github.com/OpenOps-Studio/vibe-driven-dev/issues"
+  },
   "scripts": {
     "build": "tsc -p tsconfig.json",
     "dev": "tsx cli/src/index.ts",
