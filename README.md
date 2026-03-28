@@ -81,14 +81,16 @@ Then it hands the project into downstream execution.
 
 The default workflow looks like this:
 
-1. `/vibe.init`
-2. `/vibe.plan`
-3. `/vibe.research`
-4. `/vibe.blueprint`
-5. `/vibe.detail`
-6. `/vibe.scaffold`
-7. `/vibe.qa`
-8. `/vibe.handoff-to-spec`
+| Command | What it does |
+| --- | --- |
+| `/vibe.init` | Captures the project intent, scope, audience, and success definition. |
+| `/vibe.plan` | Turns the idea into a structured problem statement and delivery shape. |
+| `/vibe.research` | Checks assumptions, feasibility, dependencies, and external constraints. |
+| `/vibe.blueprint` | Produces the system blueprint, architecture direction, and stack choices. |
+| `/vibe.detail` | Expands the blueprint into implementation-level technical detail. |
+| `/vibe.scaffold` | Generates the bootstrap files and project foundation artifacts. |
+| `/vibe.qa` | Reviews readiness, quality gates, risks, and handoff integrity. |
+| `/vibe.handoff-to-spec` | Packages the project for downstream execution systems such as Spec Kit. |
 
 Supporting commands include:
 
