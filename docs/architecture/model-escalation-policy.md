@@ -53,7 +53,7 @@ Important safety rule:
 ### OpenAI
 
 Recommend:
-- GPT-5.4 or Codex backed by GPT-5.4
+- Codex on GPT-5.4 or GPT-5.4
 
 When deeper reasoning is justified, recommend:
 - `reasoning_effort = xhigh`
@@ -63,6 +63,16 @@ Use it when the user needs:
 - strong tool-aware professional work
 - deeper reasoning for system and PRD synthesis
 
+### Google
+
+Recommend:
+- Gemini 3.1 Pro
+
+Use it when the user needs:
+- strong planning-time reasoning in the Gemini ecosystem
+- large-context synthesis across product, architecture, and constraints
+- a modern Pro-tier alternative for PRD and strategy work
+
 ## User-Facing Wording
 
 The system should not say:
@@ -71,7 +81,7 @@ The system should not say:
 
 The system should say something like:
 
-"This step is PRD-heavy and will create long-form project truth. If you want the strongest result for this phase, I recommend temporarily using a stronger model such as Claude Opus 4.6 where available, or GPT-5.4/Codex with xhigh reasoning. If you prefer, I can continue with the current model and keep the PRD as a draft."
+"This step is PRD-heavy and will create long-form project truth. If you want the strongest result for this phase, I recommend temporarily using a stronger model such as Claude Opus 4.6 where available, Codex on GPT-5.4 or GPT-5.4 with xhigh reasoning, or Gemini 3.1 Pro. If you prefer, I can continue with the current model and keep the PRD as a draft."
 
 ## Fallback Rule
 

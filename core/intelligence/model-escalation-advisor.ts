@@ -1,5 +1,5 @@
 export interface ModelRecommendation {
-  provider: "anthropic" | "openai";
+  provider: "anthropic" | "openai" | "google";
   model: string;
   rationale: string;
   reasoningEffort?: "xhigh";
@@ -79,11 +79,18 @@ export class ModelEscalationAdvisor {
         },
         {
           provider: "openai",
-          model: "GPT-5.4 / Codex",
+          model: "Codex on GPT-5.4 / GPT-5.4",
           rationale:
-            "Use when you want high-detail structured planning and tool-using reliability inside the OpenAI stack.",
+            "Use when you want high-detail structured planning and tool-using reliability inside the OpenAI stack. Prefer xhigh reasoning for deep PRD work.",
           reasoningEffort: "xhigh",
           url: "https://openai.com/index/introducing-gpt-5-4/"
+        },
+        {
+          provider: "google",
+          model: "Gemini 3.1 Pro",
+          rationale:
+            "Use when you want a newer high-reasoning Pro model for planning and large-context synthesis inside the Gemini ecosystem.",
+          url: "https://developers.googleblog.com/en/plan-mode-now-available-in-gemini-cli/"
         }
       ],
       fallback:
@@ -92,7 +99,7 @@ export class ModelEscalationAdvisor {
       decision: accepted ? "accepted" : "deferred",
       handoffPrompt: accepted
         ? "Stronger-model path accepted. Re-run scaffold on the upgraded model to keep generating or refining PRD.full.md."
-        : "Switch now to the latest active Anthropic flagship available to you, or GPT-5.4/Codex with xhigh reasoning, then re-run /vibe.scaffold --accept-model-upgrade to generate PRD.full.md."
+        : "Switch now to Claude Opus 4.6 where available, Codex on GPT-5.4 or GPT-5.4 with xhigh reasoning, or Gemini 3.1 Pro, then re-run /vibe.scaffold --accept-model-upgrade to generate PRD.full.md."
     };
   }
 }

@@ -1,0 +1,203 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "ruleSetName": "{{PROJECT_NAME}} Component Modularity & Single Responsibility Mandate",
+  "version": "2.0.0",
+  "lastUpdated": "2026-03-30",
+  "priority": "P0_BLOCKING",
+  "description": "Architectural rules enforcing modular, single-responsibility React components. Prevents monolithic 'God Components' that are impossible to maintain or test.",
+  "enforcedBy": "{{PROJECT_NAME}} AI Staff Engineer — enforced during code generation, review, and refactoring.",
+  "philosophy": "A component should do exactly one thing and do it well. If it does too much, it must be decomposed before merging.",
+
+  "_ai_agent_instructions": {
+    "CRITICAL": "Before generating any React component, check: (1) Does it exceed 150 lines? (2) Does it have more than one responsibility? (3) Does it have more than 3 useEffect hooks? If any answer is YES, decompose it first.",
+    "self_check_before_output": [
+      "Count lines of the component you just generated.",
+      "List the responsibilities of the component — there must be exactly ONE.",
+      "Count useEffect hooks — maximum 3.",
+      "If any limit is exceeded, extract to sub-components or custom hooks before outputting."
+    ],
+    "decomposition_trigger": "If you catch yourself writing 'and also' when describing what a component does, it has more than one responsibility. Split it."
+  },
+
+  "rules": [
+    {
+      "ruleId": "SRP-01",
+      "name": "Single Responsibility Principle (SRP)",
+      "priority": "P0_BLOCKING",
+      "description": "Every component must have a single, well-defined responsibility. It should handle EITHER UI presentation, state logic, OR data fetching — never all at once.",
+      "guidelines": [
+        "If a component fetches data AND renders a complex list, split into a container (data) and presentational (UI) component.",
+        "A component's name must clearly describe its single purpose. 'UserProfileCard' is good. 'UserStuff' is a violation.",
+        "If you find yourself adding 'and also' when describing what the component does, it has too many responsibilities."
+      ],
+      "examples": {
+        "compliant": [
+          "UserProfileCard — renders a user card UI from props only",
+          "useUserData — fetches and manages user data state",
+          "PostComposerForm — renders and validates the post creation form"
+        ],
+        "violations": [
+          "UserDashboard — fetches users, updates state, renders list, AND handles pagination in one 400-line file",
+          "MainPage — contains business logic, API calls, form handling, and rendering in one component"
+        ]
+      },
+      "consequence": "Violation triggers mandatory decomposition before the PR can be merged."
+    },
+    {
+      "ruleId": "MOD-02",
+      "name": "Component Size Hard Limits",
+      "priority": "P0_BLOCKING",
+      "description": "Components must not exceed defined size limits. These are enforced as build gates, not guidelines.",
+      "metrics": {
+        "softLimit": {
+          "lines": 150,
+          "action": "Triggers refactoring review. The AI agent must propose a decomposition plan."
+        },
+        "hardLimit": {
+          "lines": 250,
+          "action": "BUILD FAILURE. The component must be refactored before any output is accepted."
+        },
+        "maxUseEffectHooks": {
+          "limit": 3,
+          "action": "More than 3 useEffect hooks is a strong indicator of too many responsibilities. Extract into a custom hook immediately."
+        },
+        "maxResponsibilities": {
+          "limit": 1,
+          "examples": [
+            "Rendering a form section — ONE responsibility",
+            "Managing a piece of state — ONE responsibility",
+            "Displaying a chart — ONE responsibility"
+          ]
+        }
+      },
+      "_ai_agent_note": "Count your lines BEFORE outputting. If you are at 200 lines, STOP and decompose. Do not output a 250+ line component under any circumstance."
+    },
+    {
+      "ruleId": "MOD-03",
+      "name": "Mandatory Component Decomposition Pattern",
+      "priority": "P0_BLOCKING",
+      "description": "Large components MUST be broken into a folder structure with a parent orchestrator and focused sub-components.",
+      "structure": {
+        "pattern": "ComponentName/",
+        "files": [
+          "index.tsx — Orchestrator. Manages state, composes sub-components. No business logic.",
+          "ComponentHeader.tsx — Renders the header section only.",
+          "ComponentContent.tsx — Renders the main content section only.",
+          "ComponentFooter.tsx — Renders the footer section only.",
+          "useComponentLogic.ts — Custom hook containing all state and business logic."
+        ]
+      },
+      "examples": {
+        "violation": "Single 350-line MediaPlan.tsx with data fetching, state updates, table rendering, and export logic mixed together.",
+        "compliant": "MediaPlan/index.tsx (60 lines, composes sub-components) + MediaPlanHeader.tsx + MediaPlanTable.tsx + MediaPlanFooter.tsx + useMediaPlanData.ts"
+      },
+      "guidelines": [
+        "Create a folder for the component: src/components/MediaPlan/",
+        "Parent index.tsx only orchestrates — it does NOT contain business logic or heavy JSX.",
+        "Sub-components receive data via props and emit events via callback props.",
+        "All useState/useEffect/useCallback logic lives in a matching custom hook file."
+      ]
+    },
+    {
+      "ruleId": "MOD-04",
+      "name": "Logic Abstraction with Custom Hooks",
+      "priority": "P1_HIGH",
+      "description": "Complex logic — any combination of useState, useEffect, useCallback, API calls — must be extracted into a named custom hook.",
+      "guidelines": [
+        "If a component body has more than 2 useState calls, extract the state group into a custom hook.",
+        "If a component has fetch/async logic, it belongs in a hook, not the component.",
+        "The component body should be predominantly JSX — if it is more logic than markup, refactor.",
+        "Custom hooks live in src/hooks/ and are named with the 'use' prefix: useTheme, useExportHistory, usePosts."
+      ],
+      "examples": {
+        "violation": "A UserCard.tsx that contains useState for 5 fields, a useEffect for fetching, derived calculations, and 100 lines of JSX.",
+        "compliant": "useUserCard.ts handles all state and fetching. UserCard.tsx receives data from the hook and renders JSX only."
+      },
+      "_ai_agent_note": "A good test: if you removed all the logic from a component and only kept JSX, would it still be over 100 lines? If yes, the JSX itself needs to be decomposed into sub-components."
+    },
+    {
+      "ruleId": "MOD-05",
+      "name": "Clear Prop-Driven Communication",
+      "priority": "P1_HIGH",
+      "description": "Components communicate via props (data down) and callbacks (events up). Avoid overusing Context for data that only one component needs.",
+      "guidelines": [
+        "Favor composition over complex conditional rendering inside a single component.",
+        "Pass data and state downward as props.",
+        "Pass user events (onSubmit, onClick, onChange) upward via callback props.",
+        "Context is for truly global state (auth, theme, i18n) — not for feature-specific state."
+      ],
+      "examples": {
+        "violation": "A deeply nested component pulls 10 values directly from a global Context to avoid prop drilling, creating tight coupling.",
+        "compliant": "Parent component reads from Context and passes only the needed slice as props to the child component."
+      }
+    }
+  ],
+
+  "implementationProtocol": {
+    "title": "AI Agent Component Generation Protocol",
+    "description": "Follow these steps in order every time you generate or modify a React component.",
+    "steps": [
+      {
+        "step": 1,
+        "action": "Analyze Scope Before Writing",
+        "description": "Before writing a single line, define: What is the ONE thing this component does? What data does it need from props? What events does it emit?"
+      },
+      {
+        "step": 2,
+        "action": "Identify Decomposition Candidates",
+        "description": "Map out visible sections of the UI (header, body, list item, footer). Each section that would exceed 80 lines independently becomes its own sub-component."
+      },
+      {
+        "step": 3,
+        "action": "Extract Logic to Hooks First",
+        "description": "Write the custom hook first. Define all state, effects, and derived values there. The hook should be testable in isolation."
+      },
+      {
+        "step": 4,
+        "action": "Create the Folder Structure",
+        "description": "Create ComponentName/ folder. Create index.tsx, sub-component files, and the custom hook file before writing any implementation."
+      },
+      {
+        "step": 5,
+        "action": "Build Sub-Components First",
+        "description": "Implement leaf sub-components first (they only receive props and emit callbacks). Keep them dumb and reusable."
+      },
+      {
+        "step": 6,
+        "action": "Compose the Orchestrator Last",
+        "description": "Write index.tsx last. It calls the hook, receives data, and composes sub-components. Its JSX should be clean and declarative."
+      },
+      {
+        "step": 7,
+        "action": "Self-Audit Before Output",
+        "description": "Count lines of each file. Verify: index.tsx < 100 lines, sub-components < 150 lines. Confirm exactly ONE responsibility per file. If any file exceeds limits, refactor before outputting."
+      }
+    ]
+  },
+
+  "violations_reference": {
+    "title": "Common AI-Generated Violations to Avoid",
+    "list": [
+      {
+        "violation": "Generating a single 300-400 line component",
+        "fix": "Decompose into a folder with orchestrator + at least 3 sub-components + 1 custom hook"
+      },
+      {
+        "violation": "Putting API calls directly in the component body",
+        "fix": "Extract all data-fetching into a dedicated custom hook using React Query"
+      },
+      {
+        "violation": "Using 5+ useState hooks in a single component",
+        "fix": "Group related state into a custom hook, or use useReducer with a well-typed action set"
+      },
+      {
+        "violation": "Mixing rendering logic with complex conditional business rules",
+        "fix": "Move business logic to the hook or a pure utility function; keep component JSX clean"
+      },
+      {
+        "violation": "Components with names like 'Main', 'Page', 'Manager' containing everything",
+        "fix": "Rename to reflect single purpose and decompose accordingly"
+      }
+    ]
+  }
+}

@@ -22,9 +22,30 @@ import {
   type ModelEscalationAdvice
 } from "../intelligence/model-escalation-advisor.js";
 import {
+  runSkillBootstrap,
+  writeBootstrapArtifacts,
+  type SkillBootstrapResult
+} from "../intelligence/skill-bootstrap.js";
+import {
+  runPrdSkillBootstrap,
+  renderPrdBootstrapMd,
+  runPrdQualityGates,
+  type PrdBootstrapResult,
+  type PrdQualityGate
+} from "../intelligence/prd-skill-bootstrap.js";
+import {
+  runPostPrdExpansion,
+  type PostPrdExpansionResult
+} from "../intelligence/post-prd-expansion.js";
+import {
+  buildExpansionPlan,
+  type ExpansionPlan
+} from "../intelligence/artifact-layer-planner.js";
+import {
   AutopilotConductor,
   type StageCheckpointSummary
 } from "../autopilot/conductor.js";
+import { PopupFlowIntegration } from "../autopilot/popup-flow-integration.js";
 import { resolveInstallTarget } from "../install/registry.js";
 
 export type VddPublicCommand =
@@ -42,6 +63,7 @@ export type VddPublicCommand =
   | "/vibe.resume"
   | "/vibe.status"
   | "/vibe.skills"
+  | "/vibe.skills-bootstrap"
   | "/vibe.assumptions"
   | "/vibe.decide"
   | "/vibe.handoff-to-spec";
@@ -127,8 +149,32 @@ export interface RoutingResult {
     onboarding?: OnboardingAssessment;
     specQuality?: SpecQualityAssessment;
     skills?: SkillRecommendationResult;
+    skillBootstrap?: SkillBootstrapResult;
+    prdBootstrap?: PrdBootstrapResult;
+    prdQualityGates?: PrdQualityGate[];
     events?: EventTopologyAdvice;
     modelEscalation?: ModelEscalationAdvice;
+    postPrdExpansion?: PostPrdExpansionResult;
+    expansionPlan?: ExpansionPlan;
+    popupFlow?: {
+      shouldStart: boolean;
+      reason: string;
+      maxQuestions: number;
+      firstQuestion: {
+        started: boolean;
+        completed: boolean;
+        currentQuestion: {
+          id: string;
+          text: string;
+          category: string;
+          choices: Array<{ label: string; value: string; description?: string }> | undefined;
+          questionNumber: number;
+          totalQuestions: number;
+          progressLabel: string;
+        } | null;
+        message: string;
+      } | null;
+    };
   } | undefined;
 }
 
@@ -216,6 +262,7 @@ function resolveAgent(command: VddPublicCommand): string | null {
     case "/vibe.resume":
     case "/vibe.status":
     case "/vibe.skills":
+    case "/vibe.skills-bootstrap":
       return "orchestrator";
 
     case "/vibe.plan":
@@ -292,6 +339,8 @@ function resolveSkill(command: VddPublicCommand): string | null {
       return "vibe-status";
     case "/vibe.skills":
       return "skill-recommender";
+    case "/vibe.skills-bootstrap":
+      return "skill-bootstrapper";
     case "/vibe.assumptions":
       return "assumptions-manager";
     case "/vibe.decide":
@@ -333,6 +382,7 @@ function isReadOnlyCommand(command: VddPublicCommand): boolean {
     command === "/vibe.events" ||
     command === "/vibe.status" ||
     command === "/vibe.skills" ||
+    command === "/vibe.skills-bootstrap" ||
     command === "/vibe.resume" ||
     command === "/vibe.assumptions"
   );
@@ -433,12 +483,37 @@ function simulateArtifacts(command: VddPublicCommand): string[] {
     case "/vibe.scaffold": {
       const planner = new BootstrapPlanner();
       // Default to high-complexity SaaS for initial scaffold if no input
-      return planner.plan({
+      const baseFiles = planner.plan({
         projectType: "saas",
         hasAiFeatures: true,
         hasDesignHeavyUx: true,
         stackComplexity: "high"
       }).filesToGenerate;
+      // PRD stage outputs (added by prd-orchestrator when active)
+      const prdOutputs = [
+        "PRD.md",
+        "Feature-Breakdown.md",
+        "Implementation-Plan.md",
+        "Execution-Issues.md"
+      ];
+      // Post-PRD expansion artifacts (added by post-prd-expander)
+      const expansionOutputs = [
+        "Scope.md",
+        "Open-Questions.md",
+        "Logic.md",
+        "Stack-Decision.md",
+        "Architecture.md",
+        "ADR-0001-initial-decisions.md",
+        "Dependencies.md",
+        "Validation-Plan.md",
+        "Test-Strategy.md",
+        "Risk-Register.md",
+        "Memory.md",
+        "anti-hallucination.md",
+        "repo.md",
+        "Runbook.md"
+      ];
+      return [...prdOutputs, ...expansionOutputs, ...baseFiles];
     }
     case "/vibe.qa":
       return ["qa-report.md", "go-no-go.md"];
@@ -695,7 +770,7 @@ function buildHumanNextStep(
     modelEscalationAdvice.decision === "deferred"
   ) {
     return [
-      "Switch model to the latest active Anthropic flagship available to you, or GPT-5.4/Codex with xhigh reasoning.",
+      "Switch model to Claude Opus 4.6 where available, Codex on GPT-5.4 or GPT-5.4 with xhigh reasoning, or Gemini 3.1 Pro.",
       "Re-run /vibe.scaffold --accept-model-upgrade to generate PRD.full.md.",
       "Otherwise continue to /vibe.qa with draft PRD truth only."
     ];
@@ -785,6 +860,30 @@ export class RouterEngine {
           : "planner"
         : "onboarding-guide";
 
+      // Initialize popup flow integration for intent capture
+      const popupFlow = new PopupFlowIntegration({ maxQuestions: 5, language: "ar" });
+      const popupFlowContext = onboarding.needsMoreAnswers
+        ? (() => {
+            const started = popupFlow.start();
+            return {
+              shouldStart: true,
+              reason: "Project intent needs more clarity. The popup flow will ask adaptive questions one at a time.",
+              maxQuestions: 5,
+              firstQuestion: {
+                started: started.started,
+                completed: started.completed,
+                currentQuestion: started.currentQuestion,
+                message: started.message,
+              },
+            };
+          })()
+        : {
+            shouldStart: false,
+            reason: "Project intent is clear enough to proceed.",
+            maxQuestions: 0,
+            firstQuestion: null,
+          };
+
       return {
         ok: true,
         command: context.command,
@@ -818,7 +917,8 @@ export class RouterEngine {
               ]
         ),
         intelligence: {
-          onboarding
+          onboarding,
+          popupFlow: popupFlowContext
         }
       };
     }
@@ -964,6 +1064,62 @@ export class RouterEngine {
       };
     }
 
+    if (context.command === "/vibe.skills-bootstrap") {
+      const projectRoot = context.projectRoot ?? process.cwd();
+      const bootstrapResult = runSkillBootstrap(projectRoot, initialState, context.args);
+      const nextRecommendedCommand = stageBefore ? recommendNext(stageBefore) : "/vibe.init";
+      const recommendedAgent = bootstrapResult.recommendationResult.recommendedSpecialists[0]?.agent ?? null;
+
+      // Write artifacts if bootstrap was ready or deferred (has something to document)
+      const artifactsCreated: string[] = [];
+      if (bootstrapResult.readiness.readiness === "ready" || bootstrapResult.readiness.readiness === "deferred") {
+        const written = writeBootstrapArtifacts(projectRoot, bootstrapResult.artifacts);
+        artifactsCreated.push(...written.map((p) => p.split("/").pop() ?? p));
+      }
+
+      const warnings: string[] = [];
+      if (bootstrapResult.readiness.readiness === "blocked") {
+        warnings.push("Skill bootstrap blocked: insufficient project context.");
+      } else if (bootstrapResult.readiness.readiness === "deferred") {
+        warnings.push("Skill bootstrap deferred: confidence below threshold. Recommendations provided without installation.");
+      }
+      warnings.push(...bootstrapResult.readiness.reasons);
+
+      return {
+        ok: true,
+        command: context.command,
+        stageBefore,
+        stageAfter: stageBefore,
+        statusBefore,
+        statusAfter: statusBefore,
+        resolvedAgent: resolveAgent(context.command),
+        resolvedSkill: resolveSkill(context.command),
+        artifactsCreated,
+        warnings,
+        blockers: bootstrapResult.readiness.readiness === "blocked"
+          ? ["Insufficient project context for skill bootstrap."]
+          : [],
+        nextRecommendedCommand,
+        message: bootstrapResult.userSummary,
+        humanNextStep: bootstrapResult.nextSteps,
+        delegation: createDelegationHint(
+          "orchestrator",
+          nextRecommendedCommand,
+          recommendedAgent,
+          recommendedAgent
+            ? [
+                "The orchestrator ran the auto-skill-bootstrap flow.",
+                `${recommendedAgent} is the specialist best aligned to the installed capabilities.`
+              ]
+            : ["The orchestrator ran the auto-skill-bootstrap flow."]
+        ),
+        intelligence: {
+          skillBootstrap: bootstrapResult,
+          skills: bootstrapResult.recommendationResult
+        }
+      };
+    }
+
     const state = initialState!;
     let artifactsCreated =
       context.command === "/vibe.scaffold"
@@ -974,6 +1130,9 @@ export class RouterEngine {
     let providerAdvice: ProviderRecommendation | undefined;
     let eventAdvice: EventTopologyAdvice | undefined;
     let modelEscalationAdvice: ModelEscalationAdvice | undefined;
+    let prdBootstrapAdvice: PrdBootstrapResult | undefined;
+    let postPrdExpansionAdvice: PostPrdExpansionResult | undefined;
+    let expansionPlanAdvice: ExpansionPlan | undefined;
     let checkpoint: StageCheckpointSummary | undefined;
 
     if (context.command === "/vibe.blueprint" || context.command === "/vibe.detail") {
@@ -1035,6 +1194,79 @@ export class RouterEngine {
             : "Model escalation was not accepted yet. Scaffold will generate PRD.draft.md and keep the stronger-model path optional."
         );
         warnings.push(modelEscalationAdvice.handoffPrompt);
+      }
+
+      // PRD Skill Bootstrap: install PRD-specific skills before PRD writing
+      if (context.command === "/vibe.scaffold") {
+        prdBootstrapAdvice = runPrdSkillBootstrap(
+          context.projectRoot ?? process.cwd(),
+          initialState,
+          context.args
+        );
+
+        if (prdBootstrapAdvice.ready) {
+          artifactsCreated = Array.from(
+            new Set([...artifactsCreated, "PRD-Skill-Bootstrap.md"])
+          );
+
+          // Report phased installation plan
+          const phaseANames = prdBootstrapAdvice.phases[0]?.skillsInstalled.map(s => s.name).join(", ") ?? "";
+          const phaseBNames = prdBootstrapAdvice.phases[1]?.skillsInstalled.map(s => s.name).join(", ") ?? "";
+          const phaseCNames = prdBootstrapAdvice.phases[2]?.skillsInstalled.map(s => s.name).join(", ") ?? "";
+
+          warnings.push(
+            `PRD skill stack (phased):`,
+            `  Phase A (install now): ${phaseANames}`,
+            `  Phase B (after first draft): ${phaseBNames}`,
+            `  Phase C (after PRD stable): ${phaseCNames}`
+          );
+
+          // Run quality gates based on project state
+          const prdGates = runPrdQualityGates(initialState);
+          for (const gate of prdGates) {
+            if (!gate.passed) {
+              warnings.push(
+                `PRD ${gate.label}: BLOCKED — missing: ${gate.missingFields.join(", ")}`
+              );
+            }
+          }
+
+          // Post-PRD Expansion: build the full execution-readiness artifact plan
+          // This runs AFTER PRD skill bootstrap to plan the remaining 18 artifacts
+          const prdContent = ""; // In real use, read PRD.md from disk
+          postPrdExpansionAdvice = runPostPrdExpansion(
+            context.projectRoot ?? process.cwd(),
+            initialState,
+            prdContent,
+            context.args
+          );
+
+          expansionPlanAdvice = buildExpansionPlan(initialState, prdContent);
+
+          if (postPrdExpansionAdvice.ready) {
+            // Add expansion artifacts to the scaffold output
+            const expansionArtifactNames = expansionPlanAdvice.layers
+              .flatMap((l) => l.artifacts.map((a) => a.name));
+            artifactsCreated = Array.from(
+              new Set([...artifactsCreated, ...expansionArtifactNames, "Post-PRD-Expansion.md"])
+            );
+
+            warnings.push(
+              `Post-PRD expansion plan: ${expansionPlanAdvice.totalArtifacts} artifacts across ${expansionPlanAdvice.estimatedRounds} layers`,
+              `  Layer 1 (execution truth): ${expansionPlanAdvice.layers[0]?.totalCount ?? 0} artifacts`,
+              `  Layer 2 (system shape): ${expansionPlanAdvice.layers[1]?.totalCount ?? 0} artifacts`,
+              `  Layer 3 (execution/quality): ${expansionPlanAdvice.layers[2]?.totalCount ?? 0} artifacts`
+            );
+
+            // Report autopilot status
+            if (postPrdExpansionAdvice.autopilotStatus === "pause") {
+              warnings.push(
+                "Post-PRD expansion paused at decision checkpoint:",
+                ...postPrdExpansionAdvice.pauseReasons.map((r) => `  - ${r}`)
+              );
+            }
+          }
+        }
       }
 
       checkpoint = new AutopilotConductor().summarizeStage({
@@ -1219,7 +1451,17 @@ export class RouterEngine {
         bootstrap: buildBootstrapPlan(initialState, context.args, modelEscalationAdvice),
         ...(stackAdvice ? { stack: stackAdvice } : {}),
         ...(providerAdvice ? { provider: providerAdvice } : {}),
-        ...(modelEscalationAdvice ? { modelEscalation: modelEscalationAdvice } : {})
+        ...(modelEscalationAdvice ? { modelEscalation: modelEscalationAdvice } : {}),
+        ...(prdBootstrapAdvice ? {
+          prdBootstrap: prdBootstrapAdvice,
+          prdQualityGates: runPrdQualityGates(initialState)
+        } : {}),
+        ...(postPrdExpansionAdvice ? {
+          postPrdExpansion: postPrdExpansionAdvice
+        } : {}),
+        ...(expansionPlanAdvice ? {
+          expansionPlan: expansionPlanAdvice
+        } : {})
       } : eventAdvice ? {
         ...(stackAdvice ? { stack: stackAdvice } : {}),
         ...(providerAdvice ? { provider: providerAdvice } : {}),

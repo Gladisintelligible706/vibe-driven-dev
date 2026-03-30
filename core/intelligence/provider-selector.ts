@@ -45,12 +45,21 @@ export class ProviderSelector {
     if (input.reasoningQualityRequired === "extreme") {
       return {
         topProvider: "Anthropic",
-        topModel: "claude-3-7-sonnet",
+        topModel: "claude-opus-4-6",
         alternatives: [
-          { provider: "OpenAI", model: "o1 / o3-mini", reason: "For pure STEM, math, and dense logic" },
-          { provider: "Google", model: "gemini-3.1-pro", reason: "If massive context window (1M+) is needed alongside reasoning" },
+          {
+            provider: "OpenAI",
+            model: "codex-on-gpt-5.4 (xhigh) / gpt-5.4",
+            reason: "For very strong structured reasoning, tool-aware planning, and deep PRD or architecture synthesis.",
+          },
+          {
+            provider: "Google",
+            model: "gemini-3.1-pro",
+            reason: "Good fit when you want higher-reasoning Pro planning and large-context synthesis.",
+          },
         ],
-        rationale: "Claude 3.7 Sonnet offers the current state-of-the-art balance in extreme logical reasoning and coding generation without requiring specialized prompting.",
+        rationale:
+          "Claude Opus 4.6 is the preferred Anthropic flagship for deep reasoning, long-form strategy writing, and structured product synthesis in this workflow.",
         caveats: [
           "More expensive than Flash/Haiku models.",
           "Rate limits can be strict on Tier 1 developer accounts.",
@@ -62,11 +71,21 @@ export class ProviderSelector {
     if (input.writingQualityRequired === "high") {
       return {
         topProvider: "Anthropic",
-        topModel: "claude-3-7-sonnet",
+        topModel: "claude-opus-4-6",
         alternatives: [
-          { provider: "Google", model: "gemini-3.1-pro", reason: "Excellent nuanced writing and large context" },
+          {
+            provider: "OpenAI",
+            model: "codex-on-gpt-5.4 (xhigh) / gpt-5.4",
+            reason: "Strong structured writing and tool-aware planning inside the OpenAI stack.",
+          },
+          {
+            provider: "Google",
+            model: "gemini-3.1-pro",
+            reason: "Excellent long-context planning and strong writing quality for strategy documents.",
+          },
         ],
-        rationale: "Anthropic models historically have the most natural, least 'AI-sounding' prose generation out of the box.",
+        rationale:
+          "Claude Opus 4.6 is the preferred writing-heavy option when the output must read like serious project truth instead of a generic AI draft.",
         caveats: ["Slightly higher latency for pure text generation than some competitor models."],
         freshnessStatus: "verified_static",
       };
@@ -75,15 +94,24 @@ export class ProviderSelector {
     // Default robust balanced model
     return {
       topProvider: "OpenAI",
-      topModel: "gpt-4o",
+      topModel: "gpt-5.4",
       alternatives: [
-        { provider: "Google", model: "gemini-3.1-pro", reason: "Strong multimodal fallback" },
-        { provider: "Anthropic", model: "claude-3-5-sonnet", reason: "Excellent standard balanced model" },
+        {
+          provider: "Anthropic",
+          model: "claude-opus-4-6",
+          reason: "Preferred when you want stronger long-form writing and premium planning quality.",
+        },
+        {
+          provider: "Google",
+          model: "gemini-3.1-pro",
+          reason: "Strong Pro-tier alternative for planning, reasoning, and large-context synthesis.",
+        },
       ],
-      rationale: "GPT-4o provides a reliable, broadly supported ecosystem standard across text, reasoning, and JSON structured modes.",
+      rationale:
+        "GPT-5.4 is the best default OpenAI recommendation here when you want a current, high-quality general model for structured planning and execution support.",
       caveats: [
-        "Knowledge cutoffs apply.",
-        "Generates somewhat recognizable 'AI tone' in writing if unprompted.",
+        "Higher cost and latency than mini-class models.",
+        "May be unnecessary for lightweight or purely transactional product flows.",
       ],
       freshnessStatus: "verified_static",
     };

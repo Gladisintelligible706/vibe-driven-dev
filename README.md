@@ -15,29 +15,38 @@
 ![Claude Code](https://img.shields.io/badge/target-Claude%20Code-d97706?style=flat-square)
 ![Gemini CLI](https://img.shields.io/badge/target-Gemini%20CLI-1d4ed8?style=flat-square)
 
-Vibe Driven Dev is an agent-first framework for safe vibe coding.
-The official repository is the source of truth for what VDD is, how it should be installed, and how the workflow should run:
+Vibe Driven Dev is the **pre-execution layer for AI coding agents**.
+It helps founders, product builders, vibe coders, and teams move from a vague idea to a structured, execution-ready project.
 
-- [GitHub repository](https://github.com/OpenOps-Studio/vibe-driven-dev)
+Instead of starting with scattered prompts and jumping straight into code, VDD helps you:
+
+- understand what you are actually building
+- define the scope before implementation drifts
+- create durable project artifacts instead of hiding the logic in chat history
+- choose the right stack and AI provider for the product itself
+- prepare a clean handoff into implementation systems such as Spec Kit
+- audit an existing codebase and turn problems into a repair plan
+
+## Source of truth
+
+Use this repository as the source of truth for what VDD is, how it installs, and how the workflow should run.
+
+- [Repository](https://github.com/OpenOps-Studio/vibe-driven-dev)
 - [INSTALL.md](./INSTALL.md)
 - [USAGE.md](./USAGE.md)
 - [AGENTS.md](./AGENTS.md)
 
-## Install
+## What VDD is
 
-Install globally with npm:
+VDD is not a linter, not a one-shot prompt pack, and not a replacement for implementation tools.
 
-```bash
-npm install -g vibe-driven-dev
-```
+It is the operating layer that runs **before broad implementation begins**.
 
-Run without global install:
+It exists because most vibe coding failures come from one root problem:
 
-```bash
-npx vibe-driven-dev install claude-code --project
-```
+**people start generating code before they have enough structure.**
 
-It helps founders, product builders, and AI coding agents move from a fuzzy idea to a structured, handoff-ready project without falling into the usual traps:
+That usually creates:
 
 - weak scope
 - fragile architecture
@@ -45,144 +54,243 @@ It helps founders, product builders, and AI coding agents move from a fuzzy idea
 - stale dependency choices
 - poor AI provider decisions
 - chaotic project setup
-- handoff mess before execution
+- unusable handoff before execution
 
-## What it does
+VDD slows down the right part and speeds up the useful part.
 
-Vibe Driven Dev gives you a guided pre-execution workflow before implementation takes over.
-
-It helps you:
-
-- initialize a project journey
-- frame the real problem
-- define scope and success
-- surface assumptions and risks
-- design a usable system blueprint
-- generate bootstrap files
-- choose a suitable stack
-- choose the right AI provider and model for the product itself
-- prepare a clean handoff into downstream execution flows such as Spec Kit
-
-## Why this exists
-
-Most vibe coding fails for one simple reason:
-
-People start generating code before they have enough structure.
-
-Vibe Driven Dev exists to slow down the right part and speed up the useful part.
-
-It does not try to replace coding agents.
-It helps them work with cleaner context, better decisions, and stronger project foundations.
-
-## What problems it solves
-
-VDD is built around recurring vibe-coding failures, not generic AI hype.
-
-The core problem areas are:
-
-- spec blindness
-- context rot
-- decomposition deficit
-- manager crisis
-- invisible technical debt
-- no technical ownership
-- weak failure-mode review
-- premature complexity
-- missing validation and observability
-- unusable handoff
-- wrong external skills installed
-
-The formal matrix that maps these failures to VDD features lives in [docs/architecture/problem-to-feature-matrix.md](./docs/architecture/problem-to-feature-matrix.md).
-
-## Who this is for
+## Who VDD is for
 
 - founders building MVPs or PoCs
 - product innovators working with AI coding agents
-- non-technical builders who need a guided setup path
+- non-technical builders who need guidance in plain language
 - developers who want a safer pre-execution workflow
-- teams that want cleaner handoff into implementation systems
+- teams that want stronger handoff discipline before implementation starts
 
-## Core idea
+## Quick start
 
-Vibe Driven Dev owns **pre-execution clarity**.
+Install globally:
 
-That means it focuses on:
+```bash
+npm install -g vibe-driven-dev
+```
 
-- planning
-- research
-- blueprinting
-- detail design
-- bootstrap generation
-- readiness review
-- handoff packaging
+Or run it without a global install:
 
-Then it hands the project into downstream execution.
+```bash
+npx vibe-driven-dev install claude-code --project
+```
 
-## The journey
+Then verify the environment and start the workflow:
 
-Start with `/vibe.start`.
+```bash
+vdd doctor
+vdd run /vibe.start
+```
 
-That is the beginner-friendly entrypoint for both humans and coding agents. A good agent should not stop at installation or dump raw commands. It should:
+For full setup details, see [INSTALL.md](./INSTALL.md).
 
-- install VDD using the cleanest native project-level method for the current runtime
-- treat this repository as the source of truth before executing the workflow
+## Human Guide
+
+This section is for people who want to understand **how to use VDD step by step**.
+
+### Step 1: Start with your idea
+
+You do **not** need to begin with technical language.
+
+A good starting input is something like:
+
+> I want to build an AI tool that helps small businesses write better sales emails and follow-up messages.
+
+VDD should take that raw idea, ask a few smart questions, and help shape it into a real project.
+
+### Step 2: Let VDD guide the intake
+
+The recommended entrypoint is:
+
+```bash
+vdd run /vibe.start
+```
+
+A good coding agent should then:
+
 - start guided onboarding in plain language
-- translate the user's answers into VDD state
-- continue into the next valid workflow step automatically unless a high-impact decision needs approval
-- explain the current stage, the current mission, and the next best step
+- ask a small number of useful questions
+- build each next question from your previous answer
+- stop asking once it understands the project well enough
+- move automatically into the first valid workflow step
 
-The default workflow looks like this:
+### Step 3: Let VDD build the project truth
 
-| Command | What it does |
-| --- | --- |
-| `/vibe.init` | Captures the project intent, scope, audience, and success definition. |
-| `/vibe.plan` | Turns the idea into a structured problem statement and delivery shape. |
-| `/vibe.research` | Checks assumptions, feasibility, dependencies, and external constraints. |
-| `/vibe.blueprint` | Produces the system blueprint, architecture direction, and stack choices. |
-| `/vibe.detail` | Expands the blueprint into implementation-level technical detail. |
-| `/vibe.scaffold` | Generates the bootstrap files and project foundation artifacts. |
-| `/vibe.qa` | Reviews readiness, quality gates, risks, and handoff integrity. |
-| `/vibe.handoff-to-spec` | Packages the project for downstream execution systems such as Spec Kit. |
+After the intake, VDD should begin creating the durable artifacts that define the project properly.
 
-Supporting commands include:
+That means it should help generate things like:
 
-- `/vibe.next`
-- `/vibe.resume`
-- `/vibe.status`
-- `/vibe.assumptions`
-- `/vibe.decide`
+- PRD files
+- scope and logic documents
+- technical and execution decisions
+- implementation planning artifacts
+- audit and remediation artifacts when needed
 
-## Bootstrap files
+### Step 4: Use the next step VDD suggests
 
-Before execution, VDD can help generate a cleaner project foundation such as:
+You should not have to memorize the full command set.
+
+A good VDD-driven agent should always tell you:
+
+- what it just did
+- what it learned
+- what stage the project is in
+- what the next best step is
+- whether it can continue automatically or needs your approval
+
+## Workflow Guide
+
+VDD works in stages.
+
+The user-facing mental model should feel like:
+
+1. understand the idea
+2. structure the project
+3. lock the technical direction
+4. prepare the execution package
+5. begin implementation from solid ground
+
+### Main commands
+
+| Command | What it does | Why it matters |
+| --- | --- | --- |
+| `/vibe.start` | Beginner-friendly entrypoint that begins onboarding and routes into the right early steps. | Best starting point for humans and coding agents. |
+| `/vibe.init` | Captures the project intent, audience, scope seed, and success direction. | Turns a vague idea into usable project state. |
+| `/vibe.plan` | Shapes the problem statement, product direction, and delivery logic. | Stops the project from becoming feature soup. |
+| `/vibe.research` | Checks assumptions, feasibility, dependencies, and external constraints. | Catches weak assumptions before they become expensive mistakes. |
+| `/vibe.blueprint` | Produces system direction, architecture shape, and major technical choices. | Creates technical clarity before deeper implementation work. |
+| `/vibe.detail` | Expands the blueprint into implementation-level detail. | Makes the project easier to build consistently. |
+| `/vibe.scaffold` | Generates the bootstrap and execution-readiness artifacts. | Gives the project a real foundation instead of relying on chat memory. |
+| `/vibe.audit` | Scans the repo against canonical rules and generates issues, remediation plans, and sprint groupings. | Helps rescue or improve existing codebases with structure. |
+| `/vibe.qa` | Reviews readiness, risks, quality gates, and handoff integrity. | Prevents shallow or dishonest “we are ready” claims. |
+| `/vibe.handoff-to-spec` | Packages the project for downstream execution systems such as Spec Kit. | Creates a cleaner transition into implementation workflows. |
+
+### Supporting commands
+
+These commands are not usually the first commands you run.
+They are helper commands that keep the workflow moving when you need clarity, recovery, or explicit decisions.
+
+| Command | When to use it | What it helps with |
+| --- | --- | --- |
+| `/vibe.next` | Use it when you are not sure what should happen next. | Suggests the next best step based on the current stage, existing artifacts, and open gaps. |
+| `/vibe.resume` | Use it when the chat was interrupted, the coding agent lost context, or you are returning later. | Reconstructs the current project state and helps the agent continue from the correct point instead of restarting or guessing. |
+| `/vibe.status` | Use it when you want a fast project snapshot. | Shows where the project currently stands, what artifacts already exist, what is still missing, and what is blocking progress. |
+| `/vibe.assumptions` | Use it when you want to inspect or challenge what the system is currently assuming. | Surfaces hidden assumptions, uncertain decisions, and places where VDD is moving forward with partial confidence. |
+| `/vibe.decide` | Use it when there is a real fork in the road and a human decision is needed. | Helps compare options such as stack direction, provider choice, architecture style, or scope tradeoffs before the system proceeds. |
+
+### Quick examples
+
+```bash
+# I do not know what the next step should be
+vdd run /vibe.next
+
+# We stopped yesterday and I want the agent to continue cleanly
+vdd run /vibe.resume
+
+# I want a snapshot of the current project state
+vdd run /vibe.status
+
+# I want to see what assumptions VDD is currently making
+vdd run /vibe.assumptions
+
+# I need help choosing between two meaningful directions
+vdd run /vibe.decide
+```
+
+### Simple mental model
+
+- Use the **main commands** to move the project forward.
+- Use the **supporting commands** to recover context, inspect the state, surface uncertainty, and make better decisions.
+
+If you are unsure, start with `/vibe.next` or `/vibe.status`.
+
+## What VDD creates
+
+VDD can help generate a full execution-readiness package instead of leaving key decisions inside chat.
+
+Common artifacts include:
 
 - `PRD.draft.md`
 - `PRD.full.md`
+- `Scope.md`
+- `Open-Questions.md`
 - `Logic.md`
-- `Structure.md`
+- `Architecture.md`
+- `ADR-0001-initial-decisions.md`
+- `Stack-Decision.md`
 - `Dependencies.md`
+- `Validation-Plan.md`
+- `Test-Strategy.md`
+- `Implementation-Plan.md`
+- `Execution-Issues.md`
+- `Risk-Register.md`
+- `AI-Provider-Decision.md`
+- `Event-Architecture.md`
 - `Memory.md`
 - `anti-hallucination.md`
 - `repo.md`
-- `Design.md`
-- `Stack-Decision.md`
-- `AI-Provider-Decision.md`
+- `Runbook.md`
 
-## Multi-agent, multi-source, add-on aware
+## Code Audit & Remediation
 
-VDD is designed to work with modern coding-agent workflows.
+`/vibe.audit` scans your codebase against the canonical rule packs in `rules/RULES_INDEX.json` and generates a full audit package.
 
-It supports:
+```bash
+vdd audit
+```
 
-- skills
-- specialist agents
-- project-local runtime state
-- packs
-- archive learning sources
-- curated imports from external standards repositories
-- future MCP-backed freshness and provider intelligence
+Focused audit examples:
 
-## Supported and planned agent targets
+```bash
+vdd audit --focus architecture
+vdd audit --focus testing
+vdd audit --focus security
+vdd audit --focus performance
+vdd audit --focus events
+vdd audit --focus accessibility
+```
+
+### What it detects
+
+- circular import dependencies
+- component size violations
+- missing test coverage
+- hardcoded secrets and security issues
+- accessibility gaps
+- inconsistent error handling
+- unsafe type usage
+- duplicate or fragile dependency patterns
+
+### What it generates
+
+Audit output is written to `.vdd/audits/<timestamp>/` and typically includes:
+
+| File | Contains |
+| --- | --- |
+| `Audit-Report.md` | Executive summary, repository profile, major risks, and top findings |
+| `Audit-Issues.json` | Machine-readable issue list with evidence, severity, and remediation data |
+| `Refactor-Plan.md` | Workstream-based remediation strategy |
+| `Sprint-Plan.md` | Sprint grouping based on severity, dependency order, and leverage |
+
+### Audit engine structure
+
+```txt
+cli/src/commands/audit.ts        # thin CLI wrapper
+core/audit/
+  rule-loader.ts                 # loads and selects canonical rule packs
+  repository-profiler.ts         # detects project shape and stack
+  codebase-auditor.ts            # audit orchestrator and detection passes
+  issue-generator.ts             # converts findings into structured issues
+  sprint-planner.ts              # groups work into workstreams and sprints
+  report-writer.ts               # writes audit output artifacts
+```
+
+## Agent support
 
 VDD is designed to integrate cleanly with coding-agent environments such as:
 
@@ -194,70 +302,67 @@ VDD is designed to integrate cleanly with coding-agent environments such as:
 - Gemini CLI
 
 The goal is not to force one runtime model everywhere.
-
 The goal is to keep one canonical VDD system and export it in the cleanest native shape for each target.
 
-## Quick start
+## Use with your favorite coding agent
 
-```bash
-npx vibe-driven-dev install claude-code --project
-npx vibe-driven-dev doctor
-npx vibe-driven-dev run /vibe.start
-```
-
-For full setup details, see [INSTALL.md](./INSTALL.md). For workflow usage, see [USAGE.md](./USAGE.md).
-
-## Quickly use with your favorite coding agent
-
-You can paste a setup prompt into your preferred coding agent and ask it to:
+A good coding agent should be able to:
 
 - detect the current runtime
 - install or scaffold VDD in the cleanest project-local way
 - treat this repository as the source of truth before installation and workflow execution
 - start with `/vibe.start`
-- begin guided onboarding in plain language
+- run guided onboarding in plain language
 - continue into the next useful workflow steps automatically
 - propose the next best step after each checkpoint
 
-See [INSTALL.md](./INSTALL.md) for runtime-specific prompts and [AGENTS.md](./AGENTS.md) for the repo-native behavior contract.
+For runtime-specific prompts and setup flows, see [INSTALL.md](./INSTALL.md).
+For repo-native behavior rules, see [AGENTS.md](./AGENTS.md).
 
 ## Repository structure
 
 ```txt
 agents/
-archive/
 cli/
 core/
 docs/
-examples/
-packs/
+rules/
 skills/
 templates/
 tests/
 ```
 
+## Documentation map
+
+Use these files depending on what you need:
+
+- [INSTALL.md](./INSTALL.md) for installation and runtime setup
+- [USAGE.md](./USAGE.md) for workflow usage
+- [AGENTS.md](./AGENTS.md) for coding-agent behavior rules
+- [docs/architecture/](./docs/architecture/) for architecture, policies, and roadmap
+- [rules/README.md](./rules/README.md) for the canonical rules system
+
 ## Current status
 
 VDD is in active build-out.
 
-The architecture is already defined around:
+The strongest parts today are:
 
-- router-driven workflows
-- canonical stages
-- specialist agents
-- governance skills
-- bootstrap generation
-- add-on trust tiers
-- handoff discipline
+- workflow architecture
+- staged project thinking
+- PRD generation strategy
+- post-PRD artifact expansion strategy
+- code audit and remediation direction
+- agent-first product positioning
 
 Current work focuses on:
 
 - production hardening
-- tests
-- constitution rules
+- test coverage
 - artifact registry
 - intelligence runtime implementation
-- installation targets for coding agents
+- installation targets for major coding agents
+- autopilot mode
 
 ## Philosophy
 
@@ -268,35 +373,17 @@ VDD is built on a few simple rules:
 - do not trust imported sources automatically
 - do not confuse polish with readiness
 - do not hand off a project dishonestly
-- keep archive for learning unless something is explicitly promoted
-
-## Contributing
-
-VDD accepts contributions in multiple lanes:
-
-- core architecture
-- packs
-- runtime add-ons
-- learning-source imports
-- docs
-- examples
-
-Please read [CONTRIBUTING.md](./CONTRIBUTING.md) before opening major changes.
-
-## Security
-
-If you find a vulnerability, please use the reporting process in [SECURITY.md](./SECURITY.md).
+- keep durable artifacts instead of burying important decisions in chat
 
 ## Roadmap
 
-Near-term priorities:
+Current emphasis:
 
-- tests
-- constitution completion
-- artifact registry
-- intelligence runtime
-- bootstrap scaffolding
-- pack extraction from imported standards
+- stronger autopilot behavior
+- deeper audit coverage
+- event architecture analysis
+- design token enforcement
+- rule extraction and standardization
 - install targets for major coding agents
 
 ## License

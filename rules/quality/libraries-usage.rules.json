@@ -1,0 +1,42 @@
+{
+  "ruleSet": {
+    "name": "Libraries Usage",
+    "version": "1.0.0",
+    "description": "Guidelines for consistent and maintainable third-party library integration"
+  },
+  "rules": [
+    {
+      "id": "LIB-01",
+      "RULE": "Wrap third-party library APIs in abstraction layers to isolate external dependencies",
+      "EXAMPLE": {
+        "good": "// ✅ Correct: Abstraction layer\n// lib/storage.ts\ninterface StorageAdapter {\n  get<T>(key: string): Promise<T | null>;\n  set<T>(key: string, value: T): Promise<void>;\n  remove(key: string): Promise<void>;\n}\n\n// Implementation using localStorage\nexport const localStorageAdapter: StorageAdapter = {\n  get: async (key) => {\n    const item = localStorage.getItem(key);\n    return item ? JSON.parse(item) : null;\n  },\n  set: async (key, value) => {\n    localStorage.setItem(key, JSON.stringify(value));\n  },\n  remove: async (key) => {\n    localStorage.removeItem(key);\n  },\n};\n\n// Usage - doesn't care about implementation\nimport { localStorageAdapter as storage } from './lib/storage';\nawait storage.set('user', userData);",
+        "bad": "// ❌ Wrong: Direct library usage\n// Component A\nlocalStorage.setItem('user', JSON.stringify(userData));\n\n// Component B\nconst user = JSON.parse(localStorage.getItem('user') || '{}');\n\n// Component C\nlocalStorage.removeItem('user');\n\n// Later: Switching to IndexedDB requires changes everywhere"
+      },
+      "SEVERITY": "error",
+      "CONTEXT": "Direct usage of third-party APIs throughout the codebase creates tight coupling. Changing libraries requires updating hundreds of files. Testing is difficult because libraries can't be easily mocked. Inconsistent usage patterns emerge across different modules.",
+      "REASONING": "Abstraction layers decouple application code from library implementations. Changing from localStorage to IndexedDB becomes a single-file change. The interface serves as documentation and enables TypeScript autocomplete. Tests can inject mock implementations. Future migrations are painless."
+    },
+    {
+      "id": "LIB-02",
+      "RULE": "Document library version constraints and rationale in package.json comments or a LIBRARIES.md file",
+      "EXAMPLE": {
+        "good": "// ✅ Correct: Documented dependencies\n// LIBRARIES.md\n\n## UI Components\n- **@radix-ui/react-dropdown-menu@^2.0.0**: Accessible dropdown primitives. Chosen for WCAG compliance and headless design.\n- **@tanstack/react-query@^4.0.0**: Data fetching. Chosen over SWR for better mutation support.\n\n## State Management\n- **zustand@^4.0.0**: Lightweight state. Chosen over Redux for smaller bundle size.\n\n## Version Constraints\n- Major version pins (^): APIs are stable, safe for minor updates\n- Exact version: Breaking changes in minors, lock carefully",
+        "bad": "// ❌ Wrong: Undocumented dependencies\n// package.json\n{\n  \"dependencies\": {\n    \"react-query\": \"^3.0.0\",\n    \"swr\": \"^2.0.0\",\n    \"redux\": \"^4.0.0\",\n    \"zustand\": \"^4.0.0\"\n  }\n}\n// Why are there 3 state management libraries?\n// What happens if react-query updates to v4?"
+      },
+      "SEVERITY": "warning",
+      "CONTEXT": "Undocumented dependencies create confusion about project architecture. Team members don't know why specific libraries were chosen. Duplicate functionality libraries accumulate over time. Major version updates break applications unexpectedly.",
+      "REASONING": "Documentation prevents duplicate dependencies and guides architectural decisions. Rationale helps future developers understand design choices. Version constraint documentation prevents accidental breaking changes. Onboarding is faster when library purpose is clear."
+    },
+    {
+      "id": "LIB-03",
+      "RULE": "Evaluate bundle size impact before adding dependencies and prefer tree-shakeable alternatives",
+      "EXAMPLE": {
+        "good": "// ✅ Correct: Bundle-conscious imports\n// Import only needed functions\nimport { format, parseISO } from 'date-fns';\nimport { debounce } from 'lodash-es';\n\n// Check size before adding\n// $ npx bundlephobia moment@latest\n// Result: 67.6kB minified + gzipped\n// Decision: Use date-fns (2.4kB) instead",
+        "bad": "// ❌ Wrong: Heavy dependencies\nimport moment from 'moment'; // 67.6kB!\nimport _ from 'lodash'; // 24.2kB for all utilities!\n\n// Only using debounce but importing everything\n// Users download unnecessary code"
+      },
+      "SEVERITY": "warning",
+      "CONTEXT": "Heavy dependencies significantly increase bundle size and load times. Mobile users on slow connections suffer most. Core Web Vitals scores drop, affecting SEO. Many developers add libraries without considering their cumulative impact.",
+      "REASONING": "Bundle size directly impacts user experience and business metrics. Tree-shakeable libraries allow importing only used code. Checking bundlephobia before adding dependencies creates awareness. Alternative lightweight libraries often exist for popular heavy packages. Every kilobyte saved improves time-to-interactive."
+    }
+  ]
+}

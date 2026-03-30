@@ -172,7 +172,8 @@ Recommended wording:
 
 Recommended options:
 - latest active Anthropic flagship where available, currently Claude Opus 4.6
-- GPT-5.4 or Codex backed by GPT-5.4, with `xhigh` reasoning when the extra depth is worth the latency
+- Codex on GPT-5.4 or GPT-5.4, with `xhigh` reasoning when the extra depth is worth the latency
+- Gemini 3.1 Pro when the user prefers the Gemini ecosystem for high-reasoning planning
 
 ## 4. Optional Autopilot With Checkpoints
 

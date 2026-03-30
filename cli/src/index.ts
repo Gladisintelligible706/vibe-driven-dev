@@ -14,6 +14,7 @@ import { SecurityGate } from "../../core/gates/security-gate.js";
 import { AutopilotConductor } from "../../core/autopilot/conductor.js";
 import { runInstallCommand } from "./commands/install.js";
 import { runTargetsCommand } from "./commands/targets.js";
+import { runAuditCommand } from "./commands/audit.js";
 import { resolveVddPaths } from "../../core/install/paths.js";
 
 
@@ -50,12 +51,20 @@ function getRawRunCommand(commandParts: string[]): string {
   return commandParts.join(" ");
 }
 
+// Read version from package.json at runtime
+const packageJsonPath = path.resolve(__dirname, "../../../package.json");
+let cliVersion = "0.0.0";
+try {
+  const pkg = await fs.readJson(packageJsonPath);
+  cliVersion = pkg.version ?? cliVersion;
+} catch { /* fallback */ }
+
 program
   .name("vdd")
   .description(
     "Vibe Driven Dev: an agent-first orchestration framework for safe vibe coding."
   )
-  .version("0.1.0");
+  .version(cliVersion);
 
 program
   .command("init")
@@ -311,6 +320,25 @@ program
   });
 
 program
+  .command("audit")
+  .description("Run comprehensive code audit & remediation analysis on the current project.")
+  .option("--focus <area>", "Focus audit on specific area: architecture|testing|security|performance|events|accessibility", undefined)
+  .option("--mode <mode>", "Output mode: report|fix-plan|sprints|full", "full")
+  .option("--verbose", "Show detailed progress", false)
+  .action(async (options) => {
+    try {
+      await runAuditCommand(options);
+    } catch (error) {
+      if (error instanceof Error) {
+        console.error(chalk.red("Audit error: " + error.message));
+      } else {
+        console.error(chalk.red("Unknown audit error"));
+      }
+      process.exitCode = 1;
+    }
+  });
+
+program
   .command("targets")
   .description("List supported install targets, export modes, and implementation status.")
   .action(() => {
@@ -523,12 +551,67 @@ program
           onboarding && state
             ? autopilotConductor.plan({
                 onboarding,
-                currentStage: state.stage
+                currentStage: state.stage,
+                currentStatus: state.status,
+                artifactsPresent: state.artifacts ?? [],
+                hasBlockers: result.blockers.length > 0,
+                contradictions: []
               })
             : null;
 
-        if (autopilotPlan?.continueAutomatically && state) {
+        // Show adaptive questions if the autopilot identified them
+        if (autopilotPlan && autopilotPlan.questions.length > 0) {
+          printSection("Adaptive Questions");
+          for (const q of autopilotPlan.questions) {
+            console.log(chalk.yellow(`  [${q.leverage}] ${q.plainLanguage}`));
+          }
+        }
+
+        // Show pause decision if the autopilot decided to pause
+        if (autopilotPlan?.pauseDecision && autopilotPlan.pauseDecision.verdict !== "continue") {
+          printSection("Autopilot Decision");
+          console.log(chalk[autopilotPlan.pauseDecision.verdict === "stop" ? "red" : "yellow"](
+            `  Verdict: ${autopilotPlan.pauseDecision.verdict}`
+          ));
+          console.log(`  ${autopilotPlan.pauseDecision.explanation}`);
+          if (autopilotPlan.pauseDecision.suggestedAction) {
+            console.log(chalk.cyan(`  Suggested: ${autopilotPlan.pauseDecision.suggestedAction}`));
+          }
+        }
+
+        if (autopilotPlan?.continueAutomatically && state && autopilotPlan.pauseDecision?.verdict === "continue") {
           for (const step of autopilotPlan.steps) {
+            // Re-evaluate checkpoint before each step
+            const stepCheckpoint = autopilotConductor.plan({
+              onboarding: onboarding!,
+              currentStage: state.stage,
+              currentStatus: state.status,
+              artifactsPresent: state.artifacts ?? [],
+              hasBlockers: false,
+              contradictions: []
+            });
+
+            if (stepCheckpoint.pauseDecision?.verdict === "stop") {
+              autopilotResults.push({
+                command: step.command,
+                reason: step.reason,
+                status: "stopped",
+                pauseReason: stepCheckpoint.pauseDecision.explanation
+              });
+              break;
+            }
+
+            if (stepCheckpoint.pauseDecision?.verdict === "pause") {
+              autopilotResults.push({
+                command: step.command,
+                reason: step.reason,
+                status: "paused",
+                pauseReason: stepCheckpoint.pauseDecision.explanation,
+                requiresApproval: stepCheckpoint.pauseDecision.requiresHumanApproval
+              });
+              break;
+            }
+
             const autoResult = router.run({
               command: step.command,
               state,
@@ -560,11 +643,45 @@ program
           }
         }
 
+        // Generate checkpoint summary if autopilot ran
+        if (autopilotPlan && autopilotResults.length > 0) {
+          const summary = autopilotConductor.generateCheckpointSummary(
+            autopilotPlan.checkpointAfter,
+            autopilotPlan.mission,
+            autopilotResults.flatMap((r: any) => r.result?.artifactsCreated ?? []),
+            autopilotPlan.confidence,
+            autopilotPlan.mode
+          );
+          printSection("Checkpoint Summary");
+          console.log(summary);
+        }
+
         printSection("VDD run");
         printJson({
           parsed,
           result,
-          ...(autopilotPlan ? { autopilotPlan } : {}),
+          ...(autopilotPlan ? {
+            autopilotPlan: {
+              mode: autopilotPlan.mode,
+              mission: autopilotPlan.mission,
+              checkpointBefore: autopilotPlan.checkpointBefore,
+              checkpointAfter: autopilotPlan.checkpointAfter,
+              continueAutomatically: autopilotPlan.continueAutomatically,
+              summary: autopilotPlan.summary,
+              confidence: {
+                level: autopilotPlan.confidence.level,
+                decision: autopilotPlan.confidence.decision,
+                score: autopilotPlan.confidence.score,
+                maxScore: autopilotPlan.confidence.maxScore,
+                signals: autopilotPlan.confidence.signals,
+                assumptionRisks: autopilotPlan.confidence.assumptionRisks,
+                blockingUncertainties: autopilotPlan.confidence.blockingUncertainties
+              },
+              pauseDecision: autopilotPlan.pauseDecision,
+              questions: autopilotPlan.questions,
+              humanNextStep: autopilotPlan.humanNextStep
+            }
+          } : {}),
           ...(autopilotResults.length > 0 ? { autopilot: autopilotResults } : {}),
           state: state ?? (await stateManager.load())
         });

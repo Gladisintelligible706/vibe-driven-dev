@@ -1,0 +1,144 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "ruleSetName": "{{PROJECT_NAME}} Unified Type System Rules",
+  "version": "2.0.0",
+  "lastUpdated": "2026-03-30",
+  "priority": "P1_HIGH",
+  "description": "Rules enforcing a Single Source of Truth (SSOT) for all TypeScript types across the {{PROJECT_NAME}} codebase. Eliminates type duplication, reduces circular dependencies, and ensures every AI-generated type is immediately shared and reusable.",
+  "enforcedBy": "{{PROJECT_NAME}} AI Type Architect — activated whenever new types or interfaces are created.",
+  "philosophy": "Types are the contract of the system. They must be centralized, non-duplicated, and imported consistently. A type defined in two places is a type waiting to drift.",
+
+  "_ai_agent_instructions": {
+    "CRITICAL": "Never define a TypeScript type, interface, or enum inline in a component, hook, or service file. ALL shared types belong in src/types/index.ts.",
+    "type_creation_checklist": [
+      "CHECK 1 — Does this type already exist in src/types/index.ts? Search before creating. If it exists, IMPORT it — do not redefine it.",
+      "CHECK 2 — Is this type specific to a single file and will never be reused? Then it may be defined locally (as an inline type, not exported interface).",
+      "CHECK 3 — Will this type be used by more than one file? Then it MUST go into src/types/index.ts immediately.",
+      "CHECK 4 — Does src/types/index.ts import from any non-type file? If YES, that is a circular dependency violation — fix it."
+    ],
+    "forbidden_output_patterns": [
+      "Defining an exported interface inside a component file",
+      "Re-defining a type that already exists in src/types/index.ts",
+      "Creating a src/types/user.types.ts alongside an existing src/types/index.ts",
+      "Importing types from component files or hooks"
+    ]
+  },
+
+  "rules": [
+    {
+      "ruleId": "TYP-01",
+      "name": "Single Barrel File Principle",
+      "priority": "P1_HIGH",
+      "description": "All shared TypeScript types, interfaces, and enums must be defined and exported from exactly one file: src/types/index.ts. This is the Single Source of Truth (SSOT) for the entire type system.",
+      "guidelines": [
+        "Any type used by more than one file must live in src/types/index.ts.",
+        "All imports of shared types must be: import { MyType } from '@/types'; — never from a sub-file.",
+        "The file src/types/index.ts is the only file in src/types/ — no sub-type files allowed."
+      ],
+      "examples": {
+        "compliant": "import { User, Post, Comment } from '@/types';",
+        "violation": "import { User } from '@/components/UserCard'; // types leaking from component files",
+        "violation_2": "import { Post } from '@/types/post.types'; // fragmented type barrel files"
+      },
+      "consequence": "Any duplicate or fragmented type definition must be consolidated into src/types/index.ts and the source file deleted."
+    },
+    {
+      "ruleId": "TYP-02",
+      "name": "Unidirectional Type Dependency",
+      "priority": "P1_HIGH",
+      "description": "src/types/index.ts must be a leaf node in the dependency graph. It must NOT import from any other application file — only from external libraries if absolutely necessary.",
+      "rationale": "Types form the foundation of the system. If types import from components or hooks, circular dependencies are guaranteed. Types must only depend on themselves and external primitive types.",
+      "forbidden": [
+        "import { useAuth } from '@/hooks/useAuth'; inside src/types/index.ts",
+        "import { API_ENDPOINTS } from '@/constants'; inside src/types/index.ts",
+        "import { logger } from '@/utils'; inside src/types/index.ts"
+      ],
+      "_ai_agent_note": "If you find yourself needing to import application logic inside src/types/index.ts, you are solving the wrong problem. Restructure the dependency instead."
+    },
+    {
+      "ruleId": "TYP-03",
+      "name": "No Duplicate Type Declarations",
+      "priority": "P1_HIGH",
+      "description": "Each type or interface must be declared exactly once in src/types/index.ts. Declaring the same type in multiple files — even with slight variations — is a critical error.",
+      "detection": "Run: grep -rn 'interface User' src/ — must return exactly 1 result, in src/types/index.ts only.",
+      "consequence": "Re-declaring an existing type anywhere except src/types/index.ts is an automatic PR rejection. The duplicate must be removed and replaced with an import.",
+      "_ai_agent_note": "Before writing a new interface, search the codebase: does 'interface [TypeName]' or 'type [TypeName]' already exist? If yes, import it — don't redefine it."
+    },
+    {
+      "ruleId": "TYP-04",
+      "name": "Strict TypeScript — No 'any' Escape Hatch",
+      "priority": "P1_HIGH",
+      "description": "The TypeScript 'any' type is forbidden in production code. It defeats the purpose of the type system and creates silent runtime errors.",
+      "forbidden": [
+        "const data: any = ...",
+        "function process(input: any): any",
+        "( value as any )",
+        "// @ts-ignore without a documented reason"
+      ],
+      "alternatives": [
+        "Use 'unknown' instead of 'any' for truly unknown types, then narrow with type guards.",
+        "Use generics (<T>) for flexible but type-safe functions.",
+        "Use Partial<T>, Pick<T, K>, or Omit<T, K> for partial type shapes.",
+        "If you must suppress a TypeScript error, use // @ts-expect-error with a comment explaining why."
+      ],
+      "_ai_agent_note": "If you are typing something as 'any' because you don't know the type, STOP. Define the type first, then use it. If the type comes from an external library, import its types or use 'unknown' with a type guard."
+    },
+    {
+      "ruleId": "TYP-05",
+      "name": "Type Naming Conventions",
+      "priority": "P2_MEDIUM",
+      "description": "All types and interfaces must follow consistent naming conventions for discoverability.",
+      "conventions": {
+        "interfaces": "PascalCase noun phrases — User, UserProfile, PostDraft, ApiResponse<T>",
+        "type_aliases": "PascalCase — UserId, PostStatus, ThemeMode",
+        "enums": "PascalCase for the enum, SCREAMING_SNAKE_CASE for values — PostStatus.PUBLISHED",
+        "generic_params": "Single uppercase letter or descriptive: T, TData, TError, TResponse",
+        "utility_types": "Descriptive suffix — UserInput, UserOutput, CreateUserPayload, UpdateUserResponse"
+      },
+      "forbidden_names": [
+        "Data, Info, Item, Thing, Object — too vague, add domain context",
+        "IUser, IPost — Hungarian notation is not used in this project",
+        "userType, postInterface — mixing case conventions"
+      ]
+    }
+  ],
+
+  "implementationProtocol": {
+    "title": "Type Consolidation Protocol — Run When Adding or Refactoring Types",
+    "steps": [
+      {
+        "step": 1,
+        "name": "Search Before Creating",
+        "action": "Before defining any new type, search: grep -rn 'interface [Name]\\|type [Name] =' src/ — if it exists, import it instead of redefining it."
+      },
+      {
+        "step": 2,
+        "name": "Add to SSOT Only",
+        "action": "Add the new type definition to src/types/index.ts. Never create companion type files."
+      },
+      {
+        "step": 3,
+        "name": "Export and Update Imports",
+        "action": "Export the new type from index.ts. Update all files that should use it: import { NewType } from '@/types';"
+      },
+      {
+        "step": 4,
+        "name": "Consolidate Orphan Types",
+        "action": "If you encounter a type defined outside src/types/index.ts that is used in more than one file, move it to the SSOT and update imports."
+      },
+      {
+        "step": 5,
+        "name": "Verify the Type System",
+        "action": "Run tsc --noEmit — must complete with 0 errors. Run npm run dev — must start without runtime type errors."
+      }
+    ]
+  },
+
+  "verification": {
+    "tsc_check": "tsc --noEmit must pass with zero errors",
+    "duplicate_check": "grep commands must show each type name appearing only once across src/",
+    "import_check": "All type imports must resolve to '@/types' — never from component or hook files",
+    "any_check": "grep -rn ': any' src/ -- must return 0 results (excluding .d.ts and test files)",
+    "runtime_check": "npm run dev must start without TypeScript or circular dependency errors"
+  }
+}

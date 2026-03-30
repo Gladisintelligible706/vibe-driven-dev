@@ -4,12 +4,16 @@ import type { ModelEscalationAdvice } from "../intelligence/model-escalation-adv
 import type { ProviderRecommendation } from "../intelligence/provider-selector.js";
 import type { StackRecommendation } from "../intelligence/stack-selector.js";
 import { ConfidenceEngine, type ConfidenceAssessment } from "./confidence-engine.js";
+import { QuestionEngine, type QuestionEngineOutput, type AdaptiveQuestion } from "./question-engine.js";
+import { CheckpointPolicy, type PauseDecision, type CheckpointPolicyInput } from "./checkpoint-policy.js";
+import { NextStepEngine, type NextStepRecommendation, type MissionPlan } from "./next-step-engine.js";
 
 export type AutopilotMission =
   | "capture-intent"
   | "build-planning-package"
   | "lock-technical-direction"
-  | "build-prd-package";
+  | "build-prd-package"
+  | "prepare-execution-handoff";
 
 export type AutopilotCheckpoint =
   | "intent-captured"
@@ -18,13 +22,15 @@ export type AutopilotCheckpoint =
   | "detail-package-complete"
   | "prd-threshold-reached";
 
+export type AutopilotMode = "guided" | "autopilot" | "expert";
+
 export interface AutopilotStep {
-  command: "/vibe.plan" | "/vibe.research" | "/vibe.blueprint";
+  command: "/vibe.plan" | "/vibe.research" | "/vibe.blueprint" | "/vibe.detail" | "/vibe.scaffold" | "/vibe.qa";
   reason: string;
 }
 
 export interface AutopilotPlan {
-  mode: "guided" | "autopilot";
+  mode: AutopilotMode;
   mission: AutopilotMission;
   checkpointBefore: AutopilotCheckpoint;
   checkpointAfter: AutopilotCheckpoint;
@@ -33,6 +39,9 @@ export interface AutopilotPlan {
   summary: string;
   steps: AutopilotStep[];
   humanNextStep: string[];
+  questions: AdaptiveQuestion[];
+  pauseDecision: PauseDecision | null;
+  missionPlan: MissionPlan | null;
 }
 
 export type CheckpointApprovalType =
@@ -56,11 +65,22 @@ export interface StageCheckpointSummary {
   artifacts: string[];
   approvals: CheckpointApproval[];
   humanNextStep: string[];
+  pauseDecision: PauseDecision | null;
+  whatWasCompleted: string[];
+  whatWasLearned: string[];
+  whatRemainsOpen: string[];
+  nextBestStep: string;
+  requiresApproval: boolean;
 }
 
 export interface AutopilotInput {
   onboarding: OnboardingAssessment;
   currentStage: "init" | "plan" | "research" | "blueprint" | "detail" | "scaffold" | "qa" | "handoff";
+  currentStatus?: "idle" | "active" | "halted" | "failed" | "handoff-ready" | "completed";
+  previousAnswers?: Record<string, string>;
+  artifactsPresent?: string[];
+  hasBlockers?: boolean;
+  contradictions?: string[];
 }
 
 export interface StageCheckpointInput {
@@ -71,6 +91,9 @@ export interface StageCheckpointInput {
   events?: EventTopologyAdvice;
   modelEscalation?: ModelEscalationAdvice;
   nextRecommendedCommand?: string | null;
+  blockers?: string[];
+  warnings?: string[];
+  qualityGateFailures?: string[];
 }
 
 function inferCheckpoint(stage: AutopilotInput["currentStage"]): AutopilotCheckpoint {
@@ -178,7 +201,76 @@ function buildHumanNextStep(steps: AutopilotStep[], confidence: ConfidenceAssess
   return nextActions;
 }
 
+function buildWhatWasCompleted(command: StageCheckpointInput["command"], artifacts: string[]): string[] {
+  const completed: string[] = [];
+
+  if (command === "/vibe.blueprint") {
+    completed.push("Technical direction has been established.");
+    completed.push("Architecture baseline and system boundaries are defined.");
+  } else if (command === "/vibe.detail") {
+    completed.push("Implementation structure is ready.");
+    completed.push("Validation plan and execution notes are in place.");
+  } else {
+    completed.push("PRD generation is complete.");
+    completed.push("Feature breakdown and implementation plan are ready.");
+  }
+
+  if (artifacts.length > 0) {
+    completed.push(`Created ${artifacts.length} artifacts: ${artifacts.slice(0, 5).join(", ")}${artifacts.length > 5 ? "..." : ""}.`);
+  }
+
+  return completed;
+}
+
+function buildWhatWasLearned(
+  stack?: StackRecommendation,
+  provider?: ProviderRecommendation,
+  events?: EventTopologyAdvice
+): string[] {
+  const learned: string[] = [];
+
+  if (stack) {
+    learned.push(`Recommended stack: ${stack.recommendedStack.frontend} + ${stack.recommendedStack.backend} + ${stack.recommendedStack.database}.`);
+  }
+
+  if (provider) {
+    learned.push(`AI provider direction: ${provider.topProvider} with ${provider.topModel}.`);
+  }
+
+  if (events) {
+    if (events.relevance.requiresEventArchitecture) {
+      learned.push(`Event architecture is justified: ${events.relevance.summary}`);
+    } else {
+      learned.push("Event architecture is not needed yet. Keep handling simple.");
+    }
+  }
+
+  return learned;
+}
+
+function buildWhatRemainsOpen(
+  approvals: CheckpointApproval[],
+  blockers: string[]
+): string[] {
+  const open: string[] = [];
+
+  const pendingApprovals = approvals.filter((a) => a.status === "review");
+  for (const approval of pendingApprovals) {
+    open.push(`Pending approval: ${approval.type} — ${approval.summary}`);
+  }
+
+  for (const blocker of blockers) {
+    open.push(`Blocker: ${blocker}`);
+  }
+
+  return open;
+}
+
 export class AutopilotConductor {
+  private questionEngine = new QuestionEngine();
+  private checkpointPolicy = new CheckpointPolicy();
+  private nextStepEngine = new NextStepEngine();
+
   plan(input: AutopilotInput): AutopilotPlan {
     const confidence = new ConfidenceEngine().assess({
       onboarding: input.onboarding
@@ -188,16 +280,66 @@ export class AutopilotConductor {
     const mission = inferMission(steps);
     const checkpointAfter = inferCheckpointAfter(steps, checkpointBefore);
 
+    // Build adaptive questions if needed
+    let questions: AdaptiveQuestion[] = [];
+    if (input.onboarding.needsMoreAnswers) {
+      const questionResult = this.questionEngine.buildQuestions({
+        seed: input.onboarding.seed,
+        assessment: input.onboarding,
+        previousAnswers: input.previousAnswers ?? {},
+        mode: input.onboarding.mode
+      });
+      questions = questionResult.questions;
+    }
+
+    // Evaluate checkpoint pause decision
+    const pauseInput: CheckpointPolicyInput = {
+      checkpoint: checkpointBefore,
+      mission,
+      confidence: confidence.level,
+      confidenceDecision: confidence.decision,
+      hasStackApproval: false,
+      hasProviderApproval: false,
+      hasEventApproval: false,
+      hasModelEscalationApproval: false,
+      hasBlockers: input.hasBlockers ?? false,
+      hasWarnings: false,
+      warningsCount: 0,
+      hasQualityGateFailure: false,
+      artifactsCreated: input.artifactsPresent ?? [],
+      contradictions: input.contradictions ?? [],
+      mode: input.onboarding.mode
+    };
+    const pauseDecision = this.checkpointPolicy.evaluate(pauseInput);
+
+    // Build mission plan
+    const missionPlan = this.nextStepEngine.buildMissionPlan({
+      currentStage: input.currentStage,
+      currentStatus: input.currentStatus ?? "active",
+      confidence,
+      artifactsPresent: input.artifactsPresent ?? [],
+      hasBlockers: input.hasBlockers ?? false,
+      mode: input.onboarding.mode
+    });
+
+    const continueAutomatically =
+      steps.length > 0 &&
+      input.onboarding.mode === "autopilot" &&
+      pauseDecision.verdict === "continue";
+
     return {
       mode: input.onboarding.mode,
       mission,
       checkpointBefore,
       checkpointAfter,
-      continueAutomatically: steps.length > 0 && input.onboarding.mode === "autopilot",
+      continueAutomatically,
       confidence,
       summary: buildSummary(mission, steps),
       steps,
-      humanNextStep: buildHumanNextStep(steps, confidence)
+      humanNextStep: buildHumanNextStep(steps, confidence),
+      questions,
+      pauseDecision,
+      missionPlan
     };
   }
 
@@ -253,14 +395,14 @@ export class AutopilotConductor {
 
     const checkpoint =
       input.command === "/vibe.blueprint"
-        ? "technical-strategy-locked"
+        ? "technical-strategy-locked" as const
         : input.command === "/vibe.detail"
-        ? "detail-package-complete"
-        : "prd-threshold-reached";
+        ? "detail-package-complete" as const
+        : "prd-threshold-reached" as const;
     const mission =
       input.command === "/vibe.scaffold"
-        ? "build-prd-package"
-        : "lock-technical-direction";
+        ? "build-prd-package" as const
+        : "lock-technical-direction" as const;
     const humanNextStep = approvals
       .filter((approval) => approval.requiresApproval || approval.status === "deferred")
       .map((approval) => approval.recommendedAction);
@@ -269,18 +411,101 @@ export class AutopilotConductor {
       humanNextStep.push(`Continue to ${input.nextRecommendedCommand}.`);
     }
 
+    // Evaluate pause decision
+    const pauseInput: CheckpointPolicyInput = {
+      checkpoint,
+      mission,
+      confidence: "high",
+      confidenceDecision: "checkpoint",
+      hasStackApproval: input.stack !== undefined,
+      hasProviderApproval: input.provider !== undefined,
+      hasEventApproval: input.events !== undefined,
+      hasModelEscalationApproval: input.modelEscalation !== undefined,
+      hasBlockers: (input.blockers?.length ?? 0) > 0,
+      hasWarnings: (input.warnings?.length ?? 0) > 0,
+      warningsCount: input.warnings?.length ?? 0,
+      hasQualityGateFailure: (input.qualityGateFailures?.length ?? 0) > 0,
+      artifactsCreated: input.artifactsCreated,
+      contradictions: [],
+      mode: "autopilot"
+    };
+    const pauseDecision = this.checkpointPolicy.evaluate(pauseInput);
+
+    const whatWasCompleted = buildWhatWasCompleted(input.command, input.artifactsCreated);
+    const whatWasLearned = buildWhatWasLearned(input.stack, input.provider, input.events);
+    const whatRemainsOpen = buildWhatRemainsOpen(approvals, input.blockers ?? []);
+
+    const summary =
+      input.command === "/vibe.blueprint"
+        ? "Blueprint completed. The system now has a first technical direction and can surface the highest-impact approvals."
+        : input.command === "/vibe.detail"
+        ? "Detail completed. The system now has enough implementation structure to expose approval-sensitive technical decisions."
+        : "Scaffold completed. The PRD threshold has been reached and the remaining user choice is mostly about quality depth and approval-sensitive direction.";
+
+    const nextBestStep = input.nextRecommendedCommand
+      ? `The next best step is ${input.nextRecommendedCommand}.`
+      : "No further automatic steps are available. Review the checkpoint summary and approve pending decisions.";
+
+    const requiresApproval = pauseDecision.requiresHumanApproval ||
+      approvals.some((a) => a.requiresApproval && a.status === "review");
+
     return {
       checkpoint,
       mission,
-      summary:
-        input.command === "/vibe.blueprint"
-          ? "Blueprint completed. The system now has a first technical direction and can surface the highest-impact approvals."
-          : input.command === "/vibe.detail"
-          ? "Detail completed. The system now has enough implementation structure to expose approval-sensitive technical decisions."
-          : "Scaffold completed. The PRD threshold has been reached and the remaining user choice is mostly about quality depth and approval-sensitive direction.",
+      summary,
       artifacts: input.artifactsCreated,
       approvals,
-      humanNextStep
+      humanNextStep,
+      pauseDecision,
+      whatWasCompleted,
+      whatWasLearned,
+      whatRemainsOpen,
+      nextBestStep,
+      requiresApproval
     };
+  }
+
+  generateCheckpointSummary(
+    checkpoint: AutopilotCheckpoint,
+    mission: AutopilotMission,
+    artifactsCreated: string[],
+    confidence: ConfidenceAssessment,
+    mode: AutopilotMode
+  ): string {
+    const definition = this.checkpointPolicy.getCheckpointDefinition(checkpoint);
+
+    const lines: string[] = [
+      `## Checkpoint: ${definition.label}`,
+      "",
+      definition.description,
+      "",
+      `**Mission:** ${mission}`,
+      `**Confidence:** ${confidence.level} (${confidence.decision})`,
+      `**Mode:** ${mode}`,
+      ""
+    ];
+
+    if (artifactsCreated.length > 0) {
+      lines.push("### Artifacts Created");
+      for (const artifact of artifactsCreated) {
+        lines.push(`- ${artifact}`);
+      }
+      lines.push("");
+    }
+
+    if (confidence.reasons.length > 0) {
+      lines.push("### Confidence Signals");
+      for (const reason of confidence.reasons) {
+        lines.push(`- ${reason}`);
+      }
+      lines.push("");
+    }
+
+    if (!confidence.assumptionSafe) {
+      lines.push("> **Warning:** The system has low confidence. Assumptions may not be safe.");
+      lines.push("");
+    }
+
+    return lines.join("\n");
   }
 }

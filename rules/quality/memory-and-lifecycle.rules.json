@@ -1,0 +1,42 @@
+{
+  "ruleSet": {
+    "name": "Memory and Lifecycle",
+    "version": "1.0.0",
+    "description": "Rules for preventing memory leaks and ensuring proper resource cleanup in React applications"
+  },
+  "rules": [
+    {
+      "id": "MEM-01",
+      "RULE": "Always clean up side effects in useEffect return functions to prevent memory leaks",
+      "EXAMPLE": {
+        "good": "// ✅ Correct: Proper cleanup\nuseEffect(() => {\n  const controller = new AbortController();\n  \n  async function fetchData() {\n    try {\n      const response = await fetch(url, { signal: controller.signal });\n      setData(await response.json());\n    } catch (err) {\n      if (err.name !== 'AbortError') setError(err);\n    }\n  }\n  \n  fetchData();\n  \n  return () => controller.abort();\n}, [url]);",
+        "bad": "// ❌ Wrong: Missing cleanup\nuseEffect(() => {\n  fetch(url)\n    .then(res => res.json())\n    .then(setData)\n    .catch(setError);\n  // No cleanup - request continues after unmount!\n}, [url]);"
+      },
+      "SEVERITY": "error",
+      "CONTEXT": "Components that unmount before async operations complete cause memory leaks. Fetch requests continue and attempt to update unmounted component state. This triggers React warnings and can cause crashes. Event listeners accumulate without cleanup.",
+      "REASONING": "Cleanup functions run when components unmount, providing a last chance to cancel operations. AbortController cancels in-flight fetch requests. Cleanup prevents 'Can't perform state update on unmounted component' warnings. This pattern is essential for SPA reliability."
+    },
+    {
+      "id": "MEM-02",
+      "RULE": "Remove all event listeners and subscriptions when components unmount",
+      "EXAMPLE": {
+        "good": "// ✅ Correct: Event listener cleanup\nuseEffect(() => {\n  const handleResize = () => setWidth(window.innerWidth);\n  \n  window.addEventListener('resize', handleResize);\n  \n  return () => {\n    window.removeEventListener('resize', handleResize);\n  };\n}, []);\n\n// Subscription cleanup\nuseEffect(() => {\n  const subscription = eventEmitter.subscribe('update', handler);\n  \n  return () => {\n    subscription.unsubscribe();\n  };\n}, []);",
+        "bad": "// ❌ Wrong: Orphaned listeners\nuseEffect(() => {\n  window.addEventListener('resize', () => {\n    setWidth(window.innerWidth);\n  });\n  // No cleanup - listener persists forever!\n}, []);\n\n// Each component mount adds another listener\n// Memory leak grows over time"
+      },
+      "SEVERITY": "error",
+      "CONTEXT": "Event listeners and subscriptions persist after component unmount. They continue executing handlers and updating state. Memory usage grows as users navigate through SPA routes. Performance degrades over time. Crashes eventually occur.",
+      "REASONING": "Every addEventListener must have a matching removeEventListener. Subscription objects have unsubscribe methods for this purpose. Cleanup prevents zombie handlers from executing. Memory footprint stays constant. Browser performance remains stable during long sessions."
+    },
+    {
+      "id": "MEM-03",
+      "RULE": "Use useCallback and useMemo appropriately to prevent unnecessary re-renders and recreation of values",
+      "EXAMPLE": {
+        "good": "// ✅ Correct: Memoized callbacks and values\nconst MemoizedComponent = ({ items, onItemClick }) => {\n  const sortedItems = useMemo(\n    () => [...items].sort((a, b) => a.name.localeCompare(b.name)),\n    [items]\n  );\n  \n  const handleClick = useCallback(\n    (id: string) => {\n      onItemClick(id);\n    },\n    [onItemClick]\n  );\n  \n  return <ItemList items={sortedItems} onClick={handleClick} />;\n};",
+        "bad": "// ❌ Wrong: Unnecessary re-renders\nconst Component = ({ items, onItemClick }) => {\n  // Recreated every render - causes ItemList re-render\n  const sortedItems = [...items].sort((a, b) => a.name.localeCompare(b.name));\n  \n  // New function every render - breaks React.memo children\n  const handleClick = (id) => onItemClick(id);\n  \n  return <ItemList items={sortedItems} onClick={handleClick} />;\n};"
+      },
+      "SEVERITY": "warning",
+      "CONTEXT": "Unnecessary re-renders degrade performance, especially in large lists or complex components. Child components wrapped in React.memo still re-render when props change. Creating new functions on every render defeats memoization. Expensive calculations repeat unnecessarily.",
+      "REASONING": "useCallback maintains function identity across renders when dependencies don't change. useMemo caches expensive computations. This enables effective React.memo usage in children. Performance optimization is selective - only memoize what matters. Over-memoization adds complexity without benefit."
+    }
+  ]
+}

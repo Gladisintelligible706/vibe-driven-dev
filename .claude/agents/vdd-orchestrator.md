@@ -33,6 +33,7 @@ supported_skills:
   - stack-advisor
   - ai-provider-selector
   - bootstrap-writer
+  - prd-orchestrator
 output_mode: structured
 compatibility:
   core: "0.1.x"

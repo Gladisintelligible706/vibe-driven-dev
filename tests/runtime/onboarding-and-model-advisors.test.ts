@@ -1,6 +1,7 @@
 import { describe, expect, it } from "vitest";
 import { OnboardingEngine } from "../../core/intelligence/onboarding-engine.js";
 import { ModelEscalationAdvisor } from "../../core/intelligence/model-escalation-advisor.js";
+import { ProviderSelector } from "../../core/intelligence/provider-selector.js";
 import { ConfidenceEngine } from "../../core/autopilot/confidence-engine.js";
 import { AutopilotConductor } from "../../core/autopilot/conductor.js";
 
@@ -137,6 +138,8 @@ describe("ModelEscalationAdvisor", () => {
     expect(result.shouldRecommend).toBe(true);
     expect(result.recommendations[0]?.model).toContain("Claude Opus 4.6");
     expect(result.recommendations[1]?.reasoningEffort).toBe("xhigh");
+    expect(result.recommendations[1]?.model).toContain("Codex on GPT-5.4");
+    expect(result.recommendations[2]?.model).toContain("Gemini 3.1 Pro");
     expect(result.prdArtifact).toBe("PRD.draft.md");
     expect(result.decision).toBe("deferred");
   });
@@ -155,5 +158,22 @@ describe("ModelEscalationAdvisor", () => {
     expect(result.prdArtifact).toBe("PRD.full.md");
     expect(result.decision).toBe("accepted");
     expect(result.handoffPrompt).toContain("PRD.full.md");
+  });
+});
+
+describe("ProviderSelector", () => {
+  it("uses modern flagship recommendations for extreme reasoning work", () => {
+    const result = new ProviderSelector().evaluate({
+      reasoningQualityRequired: "extreme",
+      writingQualityRequired: "high",
+      costSensitivity: "low",
+      latencyTolerance: "high",
+      structuredOutputRequired: true
+    });
+
+    expect(result.topProvider).toBe("Anthropic");
+    expect(result.topModel).toBe("claude-opus-4-6");
+    expect(result.alternatives.some((alt) => alt.model.toLowerCase().includes("codex-on-gpt-5.4"))).toBe(true);
+    expect(result.alternatives.some((alt) => alt.model.includes("gemini-3.1-pro"))).toBe(true);
   });
 });

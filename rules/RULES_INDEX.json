@@ -1,0 +1,212 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "schemaVersion": "3.0.0",
+  "ruleSetName": "VDD Master Rules Index - AI Agent Compliance",
+  "purpose": "Central registry of all coding standards and architectural rules",
+  "lastUpdated": "2026-03-30",
+  "version": "3.0.0",
+
+  "_AI_AGENT_CRITICAL_INSTRUCTIONS": {
+    "MANDATORY": "Before writing ANY code, you MUST read and internalize all rule files listed in this index.",
+    "ENFORCEMENT": "BLOCK_ON_VIOLATION — Code violating these rules will be rejected and must be rewritten.",
+    "LOADING_PRIORITY": "Load in the order specified in 'ruleLoadOrder' below.",
+    "CONFLICTS": "In case of conflicts, higher-priority (lower number) rules always win.",
+    "VERIFICATION": "After generating code, verify against EACH rule before output."
+  },
+
+  "ruleLoadOrder": [
+    "core/incremental-intelligence-architecture.rules.json",
+    "core/regression-prevention.rules.json",
+    "core/master-rules.json",
+    "architecture/dependency-architecture.rules.json",
+    "architecture/circular-dependency.rules.json",
+    "architecture/component-modularity.rules.json",
+    "quality/testing.rules.json",
+    "quality/accessibility.rules.json",
+    "quality/performance.rules.json",
+    "quality/error-handling.rules.json",
+    "quality/security-privacy.rules.json"
+  ],
+
+  "ruleCategories": {
+    "CORE_BLOCKING": {
+      "description": "P0 Blocking rules - Any violation blocks all output",
+      "files": [
+        {
+          "path": "core/incremental-intelligence-architecture.rules.json",
+          "name": "Incremental Intelligence Architecture",
+          "applies_to": ["All AI-generated code", "Multi-step features"],
+          "key_constraints": ["No large rewrites", "Atomic changes only", "Progressive enhancement"]
+        },
+        {
+          "path": "core/regression-prevention.rules.json",
+          "name": "Zero-Regression & Feature Preservation",
+          "applies_to": ["All modifications", "Refactoring", "Upgrades"],
+          "key_constraints": ["No feature deletion", "Backward compatibility", "Test preservation"]
+        },
+        {
+          "path": "core/master-rules.json",
+          "name": "Master Coding Rules Repository",
+          "applies_to": ["All code"],
+          "key_constraints": ["Unidirectional dependencies", "Type safety", "Component limits"]
+        }
+      ]
+    },
+
+    "ARCHITECTURE": {
+      "description": "Dependency and module structure rules",
+      "files": [
+        {
+          "path": "architecture/dependency-architecture.rules.json",
+          "name": "Unidirectional Dependency Rules",
+          "key_rule": "Pages → Components → Hooks/Utils → Types/Constants",
+          "violations_cost": "High - requires major refactoring"
+        },
+        {
+          "path": "architecture/circular-dependency.rules.json",
+          "name": "Circular Import Prevention",
+          "key_rule": "No file can import from any file that imports it",
+          "violations_cost": "Critical - blocks bundling"
+        },
+        {
+          "path": "architecture/component-modularity.rules.json",
+          "name": "Component Structure Rules",
+          "key_constraints": ["Max 250 lines", "Max 3 useEffect", "Clear responsibilities"],
+          "violations_cost": "Medium - maintenance burden"
+        }
+      ]
+    },
+
+    "QUALITY": {
+      "description": "Testing, accessibility, performance, security rules",
+      "files": [
+        {
+          "path": "quality/testing.rules.json",
+          "name": "Testing & QA Standards",
+          "requirements": ["80% coverage", "Unit tests", "E2E for critical flows"],
+          "tools": ["Vitest", "React Testing Library", "Playwright"]
+        },
+        {
+          "path": "quality/accessibility.rules.json",
+          "name": "Accessibility (a11y) Standards",
+          "requirements": ["Semantic HTML", "Keyboard navigation", "ARIA compliance", "WCAG 2.1"],
+          "tools": ["axe DevTools", "Lighthouse"]
+        },
+        {
+          "path": "quality/performance.rules.json",
+          "name": "Performance Standards",
+          "requirements": ["Core Web Vitals", "Bundle optimization", "Lazy loading"],
+          "tools": ["Lighthouse", "Bundle Analyzer"]
+        },
+        {
+          "path": "quality/error-handling.rules.json",
+          "name": "Error Handling Protocol",
+          "requirements": ["Global Error Boundary", "User-friendly messages", "Logging"],
+          "pattern": "ErrorBoundary + try-catch + Zod validation"
+        },
+        {
+          "path": "quality/security-privacy.rules.json",
+          "name": "Security & Privacy Rules",
+          "requirements": ["Private by default", "No hardcoded secrets", "Encrypted storage"],
+          "tools": ["Codacy", "ESLint security", "npm audit"]
+        }
+      ]
+    },
+
+    "AI_AGENT_SPECIFIC": {
+      "description": "Rules for AI agents to understand project architecture",
+      "files": [
+        {
+          "path": "ai-agents/ai-core-architecture.md",
+          "name": "AI Module Design & Integration",
+          "purpose": "How AI features are architected in this project"
+        },
+        {
+          "path": "ai-agents/ape-architecture.md",
+          "name": "Agent Pattern Expectations",
+          "purpose": "How multi-agent systems are designed"
+        },
+        {
+          "path": "ai-agents/pivl-architecture.md",
+          "name": "Incremental Validation Layer",
+          "purpose": "Progressive validation in AI features"
+        }
+      ]
+    }
+  },
+
+  "priorityMatrix": {
+    "P0_BLOCKING": {
+      "color": "red",
+      "description": "Violations cause immediate code rejection",
+      "rules": [
+        "Incremental intelligence violations",
+        "Regression (feature loss)",
+        "Circular dependencies",
+        "Unidirectional flow violations",
+        "Security violations"
+      ]
+    },
+    "P1_HIGH": {
+      "color": "orange",
+      "description": "Violations require immediate fix in same session",
+      "rules": [
+        "Component size violations",
+        "Type safety violations",
+        "Test coverage below 80%",
+        "Accessibility violations"
+      ]
+    },
+    "P2_MEDIUM": {
+      "color": "yellow",
+      "description": "Violations are flagged with warning, trackable for follow-up",
+      "rules": [
+        "Performance degradation",
+        "Code style inconsistency",
+        "Documentation gaps"
+      ]
+    },
+    "P3_LOW": {
+      "color": "blue",
+      "description": "Advisory guidance, non-blocking but recommended",
+      "rules": [
+        "Style preferences",
+        "Naming conventions",
+        "Code organization tips"
+      ]
+    }
+  },
+
+  "agentWorkflow": {
+    "before_code_generation": [
+      "1. Load all rule files in ruleLoadOrder sequence",
+      "2. Internalize the philosophy and constraints",
+      "3. Identify which rules apply to current task",
+      "4. Plan code structure within those constraints"
+    ],
+    "during_code_generation": [
+      "1. Write code with active rule checking",
+      "2. Self-correct violations immediately",
+      "3. Add comments explaining rule-driven decisions",
+      "4. Track which rules were applied"
+    ],
+    "after_code_generation": [
+      "1. Verify against each P0 rule (blocking)",
+      "2. Verify against each P1 rule (high priority)",
+      "3. Flag any P2/P3 violations with warnings",
+      "4. Output verification report with rule compliance"
+    ]
+  },
+
+  "migrationNotes": {
+    "from_old_structure": "Rules were scattered across vibe-driven-dev root. Now organized by category.",
+    "new_locations": {
+      "core_rules": "rules/core/",
+      "architecture_rules": "rules/architecture/",
+      "quality_rules": "rules/quality/",
+      "ai_agent_docs": "rules/ai-agents/",
+      "this_index": "rules/RULES_INDEX.json"
+    },
+    "backwards_compatibility": "Old files in vibe-driven-dev root remain for transition period. Priority: migrate references to new paths."
+  }
+}

@@ -16,6 +16,7 @@ export const publicCommandSchema = z.union([
   z.literal("/vibe.resume"),
   z.literal("/vibe.status"),
   z.literal("/vibe.skills"),
+  z.literal("/vibe.skills-bootstrap"),
   z.literal("/vibe.assumptions"),
   z.literal("/vibe.decide"),
   z.literal("/vibe.handoff-to-spec")
@@ -36,6 +37,7 @@ export const commandActionSchema = z.union([
   z.literal("resume"),
   z.literal("status"),
   z.literal("skills"),
+  z.literal("skills-bootstrap"),
   z.literal("assumptions"),
   z.literal("decide"),
   z.literal("handoff-to-spec")
@@ -63,6 +65,7 @@ const ACTION_BY_COMMAND: Record<VddPublicCommand, ParsedCommand["action"]> = {
   "/vibe.resume": "resume",
   "/vibe.status": "status",
   "/vibe.skills": "skills",
+  "/vibe.skills-bootstrap": "skills-bootstrap",
   "/vibe.assumptions": "assumptions",
   "/vibe.decide": "decide",
   "/vibe.handoff-to-spec": "handoff-to-spec"

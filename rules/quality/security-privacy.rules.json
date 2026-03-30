@@ -1,0 +1,71 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "ruleSetName": "{{PROJECT_NAME}} Security & Privacy Mandate",
+  "version": "2.0.0",
+  "lastUpdated": "2026-03-30",
+  "priority": "P0_BLOCKING",
+  "description": "Rules enforcing privacy-first, secure-by-default principles across {{PROJECT_NAME}}. Security is a non-negotiable constraint, not a post-launch concern.",
+  "enforcedBy": "{{PROJECT_NAME}} AI Security Auditor — activated on every code generation task that touches data storage, API calls, authentication, or external integrations.",
+
+  "_ai_agent_instructions": {
+    "CRITICAL": "Before outputting any code, run the Security Self-Audit. Any P0 violation must be fixed before output.",
+    "security_self_audit": [
+      "CHECK 1 — Secrets: Does any generated code contain hardcoded API keys, passwords, tokens? If YES → replace with env vars. BLOCK.",
+      "CHECK 2 — Storage: Does code write to localStorage directly (not via storageManager)? If YES → refactor. BLOCK.",
+      "CHECK 3 — External Calls: Does code call external domains? If YES → verify on allow-list. BLOCK if not.",
+      "CHECK 4 — Data Logging: Does code log user PII, tokens, or sensitive data? If YES → remove. BLOCK.",
+      "CHECK 5 — Auth: Does new API route lack authentication/authorization? If YES → add guard. BLOCK."
+    ]
+  },
+
+  "rules": [
+    {
+      "ruleId": "SEC-01",
+      "name": "Private by Default",
+      "priority": "P0_BLOCKING",
+      "description": "All data, APIs, and storage must assume private access unless explicitly marked public.",
+      "guidelines": [
+        "Never log sensitive user data, tokens, or session identifiers to console",
+        "All API routes must implement authentication AND authorization by default",
+        "Data fetching must apply user-scoped filters",
+        "Any public-facing endpoint must be explicitly designed and reviewed"
+      ]
+    },
+    {
+      "ruleId": "SEC-02",
+      "name": "Local Storage & IndexedDB via storageManager Only",
+      "priority": "P0_BLOCKING",
+      "description": "All client-side persistence must go through the project's storageManager utility.",
+      "forbidden": ["window.localStorage.setItem", "localStorage.getItem", "Direct IndexedDB usage"],
+      "correct_pattern": "import { loadFromStorage, saveToStorage } from '@/utils/storageManager';"
+    },
+    {
+      "ruleId": "SEC-03",
+      "name": "No Hardcoded Secrets — Zero Tolerance",
+      "priority": "P0_BLOCKING",
+      "description": "Secrets must NEVER appear in source code. Zero exceptions.",
+      "correct_pattern": "const apiKey = process.env.GEMINI_API_KEY; if (!apiKey) throw new Error('Missing GEMINI_API_KEY');"
+    },
+    {
+      "ruleId": "SEC-04",
+      "name": "External API Access Control",
+      "priority": "P0_BLOCKING",
+      "description": "All external API calls must be on the project's API allow-list.",
+      "guidelines": ["Check allowed-apis.json before adding new external call", "Wrap calls in service layer", "Implement request rate limiting"]
+    },
+    {
+      "ruleId": "SEC-05",
+      "name": "Signed Links & Expiry for User Assets",
+      "priority": "P1_HIGH",
+      "description": "All user-related asset links must be time-limited and signed.",
+      "guidelines": ["Use signed URLs with TTL (default: 15 min)", "Implement server-side revocation", "Log all link generation for audit"]
+    },
+    {
+      "ruleId": "SEC-06",
+      "name": "Input Validation & Sanitization",
+      "priority": "P1_HIGH",
+      "description": "All user input must be validated on both client and server.",
+      "guidelines": ["Use Zod schemas for form and API input", "Validate on server before DB ops", "Use DOMPurify for HTML output", "Never use dangerouslySetInnerHTML without sanitization"]
+    }
+  ]
+}

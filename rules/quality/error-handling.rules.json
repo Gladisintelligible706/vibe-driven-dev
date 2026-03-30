@@ -1,0 +1,44 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "ruleSetName": "{{PROJECT_NAME}} Error Handling & Resilience Protocol",
+  "version": "1.0.0",
+  "description": "Rules for ensuring the application handles errors gracefully at every layer (UI, API, Forms).",
+  "philosophy": "Errors are not exceptions; they are a predictable part of the user flow and must be handled elegantly.",
+  
+  "_ai_agent_instructions": {
+    "CRITICAL": "Every generated component or hook that fetches data MUST include error handling.",
+    "error_handling_pattern": "Components should handle three states: loading, error, and success. Never render without checking isError state.",
+    "error_messages": "Always display user-friendly error messages, never raw API error details to users."
+  },
+
+  "rules": [
+    {
+      "ruleId": "ERR-01",
+      "name": "Global UI Error Boundary",
+      "priority": "P0_BLOCKING",
+      "description": "The entire application MUST be wrapped in a React Error Boundary component.",
+      "purpose": "Catch unexpected rendering errors and display fallback UI instead of blank screen",
+      "implementation": "Use `components/shared/ErrorBoundary.tsx` in root layout"
+    },
+    {
+      "ruleId": "ERR-02",
+      "name": "API Error Handling Mandate",
+      "priority": "P1_HIGH",
+      "description": "All data-fetching hooks MUST handle the `isError` state.",
+      "guidelines": [
+        "If `isError` is true, render a specific error message or fallback component",
+        "Do not let API errors bubble up and crash the UI",
+        "Hook should return structured error object",
+        "Display user-friendly messages, not technical details"
+      ]
+    },
+    {
+      "ruleId": "ERR-03",
+      "name": "Form Validation & Feedback",
+      "priority": "P1_HIGH",
+      "description": "All forms MUST provide clear, field-level validation feedback.",
+      "implementation": "Use Zod for schema validation + react-hook-form for error display at field level",
+      "prohibited": "Single alert() for form errors"
+    }
+  ]
+}

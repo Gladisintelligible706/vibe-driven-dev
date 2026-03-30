@@ -1,0 +1,155 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "ruleSetName": "{{PROJECT_NAME}} Zero-Regression & Feature Preservation Mandate",
+  "version": "2.0.0",
+  "lastUpdated": "2026-03-30",
+  "priority": "P0_BLOCKING",
+  "description": "Strict, non-negotiable rules to prevent regressions or breaking tested features when introducing new code. This is the highest-priority safeguard in the project — a regression is worse than a missing feature.",
+  "enforcedBy": "{{PROJECT_NAME}} AI Staff Engineer — activated on every code generation or modification task.",
+  "philosophy": "Do No Harm. New code must integrate seamlessly without removing, weakening, or silencing existing behavior. Complexity must be abstracted, not deleted.",
+
+  "_ai_agent_instructions": {
+    "CRITICAL": "Before modifying ANY existing file, you MUST complete the Pre-Change Audit below. Skipping it is a P0 violation.",
+    "mandatory_pre_change_audit": [
+      "Step 1 — ENUMERATE: List every feature, state variable, and UI behavior currently present in the file(s) you are about to modify.",
+      "Step 2 — IMPACT ANALYSIS: For each feature listed, state explicitly whether your change could affect it and how.",
+      "Step 3 — NON-DESTRUCTIVE PLAN: Describe exactly how new code integrates WITHOUT touching existing working logic.",
+      "Step 4 — IMPLEMENT WITH PRECISION: Make only the targeted changes identified in Step 3. Touch nothing else.",
+      "Step 5 — POST-CHANGE VERIFICATION: After changes, re-enumerate all features from Step 1 and confirm each is still intact."
+    ],
+    "red_flags_that_require_pause": [
+      "You are about to delete a function or component",
+      "You are about to comment out existing logic",
+      "You are about to rewrite more than 30% of an existing file",
+      "You are replacing a stateful component with a simpler stateless one",
+      "You are removing an import that seems 'unused' — it may still be needed"
+    ],
+    "when_in_doubt": "If you are unsure whether a change is safe, make the SMALLEST possible change and explicitly flag it for human review. Never guess."
+  },
+
+  "rules": [
+    {
+      "ruleId": "REG-01",
+      "name": "Preservation of Existing Functionality",
+      "priority": "P0_BLOCKING",
+      "description": "No feature may be deleted, disabled, or rewritten without explicit human approval. New implementations must adapt to existing architecture — not replace it.",
+      "violations": {
+        "action": "Immediate code revert and rejection. The AI agent must restore the original code and propose a non-destructive alternative.",
+        "examples": [
+          "Deleting a working panel to simplify state management — FORBIDDEN.",
+          "Commenting out real-time tips because they conflict with a new feature — FORBIDDEN.",
+          "Replacing a multi-state component with a simpler version that loses behavior — FORBIDDEN.",
+          "Removing a useEffect 'to clean things up' when it was handling important cleanup logic — FORBIDDEN.",
+          "Deleting an entire API handler because the new approach 'doesn't need it' — FORBIDDEN."
+        ]
+      },
+      "_ai_agent_note": "If your task says 'rewrite X', treat it as 'add to X without destroying what X does today'. Always preserve and extend, never replace."
+    },
+    {
+      "ruleId": "REG-02",
+      "name": "Test-Driven Refactoring Principle",
+      "priority": "P0_BLOCKING",
+      "description": "Refactors to existing features must be protected by tests proving no behavior change occurs. No merge allowed without test coverage on refactored functionality.",
+      "procedure": [
+        "Write a test that verifies the current behavior BEFORE refactoring.",
+        "Refactor the component or logic.",
+        "Run the test suite to confirm the test still passes — behavior is unchanged.",
+        "Only then submit for review."
+      ],
+      "_ai_agent_note": "When asked to refactor, generate the test for current behavior FIRST, then refactor. If you cannot write a test, flag the risk explicitly before touching any code."
+    },
+    {
+      "ruleId": "REG-03",
+      "name": "Isolation & Abstraction Before Integration",
+      "priority": "P0_BLOCKING",
+      "description": "New features must be implemented in complete isolation and integrated through stable, defined interfaces (hooks, services, utilities). Never directly mutate the internals of existing components.",
+      "guidelines": [
+        "Build the new feature as a completely standalone hook, service, or component first.",
+        "Define the integration interface (props, return values, events) before connecting it to existing code.",
+        "Abstract shared state or logic into hooks/services BEFORE adding new logic on top.",
+        "Develop in feature branches (feature/...) and test in full isolation before merging."
+      ],
+      "examples": {
+        "violation": "Adding isPremiumUser state directly into an existing 300-line component by modifying it in-place.",
+        "compliant": "Creating a useSubscription hook that manages the isPremiumUser state and integrating it into the existing component via the hook API only."
+      }
+    },
+    {
+      "ruleId": "REG-04",
+      "name": "Surgical Change Principle",
+      "priority": "P0_BLOCKING",
+      "description": "Changes must be surgical and atomic. Only touch the lines necessary to implement the requested change. All other lines must remain byte-for-byte identical.",
+      "guidelines": [
+        "If you need to change 5 lines, change exactly 5 lines — not 50.",
+        "Do not 'improve' unrelated code while implementing a requested feature.",
+        "Do not reformat or re-style code outside the scope of your change.",
+        "Do not add 'nice to have' refactors unless explicitly requested."
+      ],
+      "_ai_agent_note": "Scope creep in code generation is a regression risk. If you see something that could be improved outside your task, DOCUMENT IT as a follow-up suggestion instead of changing it."
+    },
+    {
+      "ruleId": "REG-05",
+      "name": "Dependency Change Awareness",
+      "priority": "P1_HIGH",
+      "description": "When changing a shared utility, hook, or type, audit all consumers of that entity before making changes.",
+      "procedure": [
+        "Search the codebase for all imports of the entity you are modifying.",
+        "For each consumer, verify your change does not break its expectations.",
+        "If a change is breaking for any consumer, either make it backward-compatible or update all consumers atomically."
+      ],
+      "_ai_agent_note": "Changing the return type of a shared hook is NOT a local change — it can break every component that uses that hook. Always trace consumers first."
+    }
+  ],
+
+  "implementationProtocol": {
+    "title": "Mandatory Zero-Regression Protocol — Run Before Every Change",
+    "steps": [
+      {
+        "step": 1,
+        "name": "Acknowledge Existing Features",
+        "action": "List all current states, features, and UI behaviors in the file(s) being modified.",
+        "example": "Acknowledged: PlaygroundPage contains — formData state, currentStep stepper, realtimeTips panel, dynamicQuestions array, and exportHistory modal. All five must survive unchanged."
+      },
+      {
+        "step": 2,
+        "name": "Formulate a Non-Destructive Integration Plan",
+        "action": "Describe explicitly how new code integrates without touching existing working logic.",
+        "example": "Plan: Add isPremiumUser boolean state via a new useSubscription hook. Wire it into PlaygroundPage via hook return value only. Zero changes to realtimeTips, dynamicQuestions, or currentStep logic."
+      },
+      {
+        "step": 3,
+        "name": "Implement with Surgical Precision",
+        "action": "Apply only the changes scoped in Step 2. Include a comment on every new block: '// NEW: [feature name]' to clearly mark additions.",
+        "example": "// NEW: Premium subscription gate — added isPremiumUser check in the form submit handler only."
+      },
+      {
+        "step": 4,
+        "name": "Self-Correction & Regression Check",
+        "action": "After implementing, re-read the acknowledged features from Step 1. Explicitly confirm each is still intact.",
+        "verification_template": "Self-Correction Complete. Verification: (1) formData state — intact. (2) realtimeTips — intact. (3) dynamicQuestions — intact. (4) currentStep — intact. (5) exportHistory — intact. No regressions detected."
+      }
+    ]
+  },
+
+  "prohibited_patterns": {
+    "title": "Patterns the AI Agent Must Never Produce",
+    "patterns": [
+      {
+        "pattern": "// TODO: bring this back later — [commented-out working code]",
+        "reason": "Silently breaks features. If something must be temporarily removed, flag it as a breaking change requiring human approval."
+      },
+      {
+        "pattern": "Replacing an existing component wholesale to simplify the implementation",
+        "reason": "Always loses edge cases and behavior that existed for a reason. Extend, don't replace."
+      },
+      {
+        "pattern": "Deleting old API handler because the new implementation 'handles everything'",
+        "reason": "Other consumers of the old handler break silently. Always deprecate properly."
+      },
+      {
+        "pattern": "Rewriting a utility function with a 'better' algorithm without testing the original behavior",
+        "reason": "The original function may have handled edge cases the new one ignores. Always test before refactoring."
+      }
+    ]
+  }
+}

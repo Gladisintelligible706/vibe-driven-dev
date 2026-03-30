@@ -1,6 +1,6 @@
 {
   "name": "vibe-driven-dev",
-  "version": "0.1.2",
+  "version": "1.3.0-beta.1",
   "description": "The missing pre-execution layer for AI coding agents. Vibe Driven Dev turns messy ideas into structured plans, stack decisions, AI model choices, bootstrap files, and handoff-ready workflows.",
   "type": "module",
   "bin": {
@@ -9,8 +9,18 @@
   "main": "dist/cli/src/index.js",
   "files": [
     "agents",
+    "core",
     "dist",
+    "rules",
+    "skills",
     "templates",
+    "AGENTS.md",
+    "CHANGELOG.md",
+    "CONTRIBUTING.md",
+    "INSTALL.md",
+    "USAGE.md",
+    "CODE_OF_CONDUCT.md",
+    "SECURITY.md",
     "README.md",
     "LICENSE"
   ],

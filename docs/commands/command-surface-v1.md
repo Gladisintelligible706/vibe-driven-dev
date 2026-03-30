@@ -433,6 +433,52 @@ Ends the Vibe Driven Dev pre-execution journey and prepares the project for Spec
 - QA has not passed
 - critical unresolved risk remains
 
+---
+
+### `/vibe.audit`
+
+#### Purpose
+Audit a repository against curated coding standards and produce a structured remediation roadmap.
+
+#### What it does
+This command scans the codebase, selects the relevant rule packs based on project shape, compares implementation patterns against those rules, generates structured issues with evidence, and produces a prioritized sprint plan.
+
+It operates in **autopilot mode**: repository scan → rule selection → comparison → issue generation → remediation plan → sprint planning → executive summary.
+
+#### Variants
+- `/vibe.audit` — full audit pipeline
+- `/vibe.audit --focus <area>` — focused audit (architecture, testing, security, performance, events, accessibility)
+- `/vibe.audit --mode report` — report only
+- `/vibe.audit --mode fix-plan` — remediation plan only
+- `/vibe.audit --mode sprints` — sprint plan only
+
+#### Outputs
+- `.vdd/audits/<timestamp>/Audit-Report.md`
+- `.vdd/audits/<timestamp>/Audit-Issues.json`
+- `.vdd/audits/<timestamp>/Refactor-Plan.md`
+- `.vdd/audits/<timestamp>/Sprint-Plan.md`
+- `.vdd/audits/<timestamp>/Rule-Coverage.md` (optional)
+
+#### Skill
+`skills/governance/codebase-auditor/SKILL.md`
+
+#### Stage
+Cross-stage. Can be used at any point in the VDD journey or independently.
+
+#### Transition
+No required state transition. This is a review and planning command.
+
+#### Refusal or Halt Conditions
+- repository root cannot be determined
+- no rule reference files are accessible
+- codebase is too large without scoping guidance (suggest `--focus`)
+- project type is completely ambiguous
+
+#### Read-only rule
+This command does not mutate the codebase. Output is findings, plan, and recommendations only.
+
+---
+
 ## Command Roles in the Journey
 
 The default journey is:
@@ -451,6 +497,9 @@ Supporting commands:
 - `/vibe.status`
 - `/vibe.assumptions`
 - `/vibe.decide`
+
+Governance commands:
+- `/vibe.audit`
 
 ## Stage Rules
 

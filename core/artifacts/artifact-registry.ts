@@ -292,6 +292,93 @@ const CORE_ARTIFACTS: ArtifactContract[] = [
     required: true,
     trustLevel: "trusted",
   },
+
+  // ── Post-PRD Expansion Artifacts ──────────────────────────────────────────
+  // These are generated after PRD completion as part of the execution-readiness
+  // package. They share the scaffold stage because expansion runs after PRD.
+
+  // Layer 1 — Lock the execution truth
+  {
+    name: "Open-Questions.md",
+    description: "All unresolved choices, blocked assumptions, and decisions waiting on input",
+    producedByStage: "scaffold",
+    required: true,
+    trustLevel: "trusted",
+  },
+  {
+    name: "Stack-Decision.md",
+    description: "Selected stack, rejected alternatives, rationale, and revisit conditions",
+    producedByStage: "scaffold",
+    required: true,
+    trustLevel: "trusted",
+  },
+  {
+    name: "AI-Provider-Decision.md",
+    description: "AI provider and model choice, rationale, alternatives, and revisit triggers",
+    producedByStage: "scaffold",
+    required: false,
+    trustLevel: "trusted",
+  },
+
+  // Layer 2 — Design the system shape
+  {
+    name: "Architecture.md",
+    description: "Major components, boundaries, data flow, external systems, and responsibility split",
+    producedByStage: "scaffold",
+    required: true,
+    trustLevel: "trusted",
+  },
+  {
+    name: "ADR-0001-initial-decisions.md",
+    description: "Architecture Decision Record capturing key decisions with context and trade-offs",
+    producedByStage: "scaffold",
+    required: true,
+    trustLevel: "trusted",
+  },
+  {
+    name: "Event-Architecture.md",
+    description: "Event-driven patterns, async flows, ordering, idempotency, and correlation",
+    producedByStage: "scaffold",
+    required: false,
+    trustLevel: "trusted",
+  },
+
+  // Layer 3 — Prepare execution and quality
+  {
+    name: "Test-Strategy.md",
+    description: "Testing pyramid: unit, integration, E2E coverage plan and deferral decisions",
+    producedByStage: "scaffold",
+    required: true,
+    trustLevel: "trusted",
+  },
+  {
+    name: "Implementation-Plan.md",
+    description: "Execution phases, order of implementation, dependencies, and cut lines",
+    producedByStage: "scaffold",
+    required: true,
+    trustLevel: "trusted",
+  },
+  {
+    name: "Execution-Issues.md",
+    description: "Discrete work units with issue-ready descriptions, priorities, and dependencies",
+    producedByStage: "scaffold",
+    required: true,
+    trustLevel: "trusted",
+  },
+  {
+    name: "Runbook.md",
+    description: "Core operational steps: setup, reset, seed, recovery, and error handling",
+    producedByStage: "scaffold",
+    required: true,
+    trustLevel: "trusted",
+  },
+  {
+    name: "Post-PRD-Expansion.md",
+    description: "Summary of the post-PRD expansion process: layers completed, gates passed, decisions pending",
+    producedByStage: "scaffold",
+    required: false,
+    trustLevel: "trusted",
+  },
 ];
 
 // Register all core contracts on module load

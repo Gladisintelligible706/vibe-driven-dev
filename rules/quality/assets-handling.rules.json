@@ -1,0 +1,100 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "ruleSetName": "{{PROJECT_NAME}} Assets & Media Handling Rules",
+  "version": "1.0.0",
+  "description": "Rules for handling images, icons, and static assets in {{PROJECT_NAME}}. Ensures performance, consistency, and scalability.",
+  "rules": [
+    {
+      "id": "AST-01",
+      "severity": "warning",
+      "title": "Optimized Image Formats",
+      "description": "All images must be stored in optimized formats (WebP or AVIF preferred). JPG and PNG are only allowed if optimization tools cannot convert them without quality loss. Favicon must include multiple sizes (16x16, 32x32, 64x64) in `.ico` or `.png` format.",
+      "rationale": "Modern image formats significantly reduce file size while maintaining quality, improving page load times and Core Web Vitals scores.",
+      "badExample": {
+        "code": "// ❌ BAD: Using unoptimized formats\nimport heroImage from './hero.png'; // 2MB PNG file\n<img src={heroImage} alt=\"Hero\" />",
+        "problems": [
+          "Large file size increases bandwidth usage",
+          "Slower page load times",
+          "Poor Lighthouse performance scores"
+        ]
+      },
+      "goodExample": {
+        "code": "// ✅ GOOD: Using optimized formats\n// hero.webp is ~200KB instead of 2MB\n<img src=\"/assets/images/hero.webp\" alt=\"Hero\" loading=\"lazy\" />",
+        "benefits": [
+          "~90% reduction in file size",
+          "Faster page loads",
+          "Better Core Web Vitals"
+        ]
+      }
+    },
+    {
+      "id": "AST-02",
+      "severity": "error",
+      "title": "Static Assets Directory Structure",
+      "description": "All static assets must be stored under `/public/assets/` with clear subfolders: Images → `/public/assets/images/`, Icons → `/public/assets/icons/`, Logos → `/public/assets/logos/`, Fonts → `/public/assets/fonts/`.",
+      "rationale": "Consistent directory structure improves maintainability, makes asset discovery easier, and ensures proper caching and build optimization.",
+      "badExample": {
+        "code": "// ❌ BAD: Scattered assets\nsrc/\n  components/\n    Header/\n      logo.png\n      icon.svg\n  pages/\n    Home/\n      banner.jpg\n  utils/\n    font.ttf",
+        "problems": [
+          "No discoverability - assets scattered across codebase",
+          "Duplicate assets in multiple locations",
+          "Difficult to audit and optimize"
+        ]
+      },
+      "goodExample": {
+        "code": "// ✅ GOOD: Organized structure\npublic/\n  assets/\n    images/\n      banners/\n        home-banner.webp\n    icons/\n      menu.svg\n      close.svg\n    logos/\n      primary.svg\n    fonts/\n      inter.woff2",
+        "benefits": [
+          "Single source of truth for all assets",
+          "Easy to audit and optimize",
+          "Clear ownership and maintenance"
+        ]
+      }
+    },
+    {
+      "id": "AST-03",
+      "severity": "warning",
+      "title": "SVG Usage Policy",
+      "description": "SVGs must be used whenever possible for icons and vector graphics. Inline SVGs if they need to be dynamic (e.g., theming, animations). Static SVGs go inside `/public/assets/icons/`. Do not use rasterized PNG versions of SVGs.",
+      "rationale": "SVGs are resolution-independent, smaller in file size for icons, and can be styled with CSS. Using PNG versions of SVGs defeats these benefits.",
+      "badExample": {
+        "code": "// ❌ BAD: Using PNG for icons\n<img src=\"/assets/icons/menu.png\" alt=\"Menu\" />\n// Or importing SVG as PNG\nimport menuIcon from './menu-icon.png';",
+        "problems": [
+          "Blurry on high-DPI displays",
+          "Larger file size",
+          "Cannot be styled with CSS"
+        ]
+      },
+      "goodExample": {
+        "code": "// ✅ GOOD: Using SVG for icons\n// Static SVG\n<img src=\"/assets/icons/menu.svg\" alt=\"Menu\" />\n\n// Dynamic SVG (inline for theming)\n<MenuIcon className=\"text-primary w-6 h-6\" />",
+        "benefits": [
+          "Crisp on all screen resolutions",
+          "Smaller file size",
+          "Styleable with CSS variables"
+        ]
+      }
+    },
+    {
+      "id": "AST-04",
+      "severity": "error",
+      "title": "Asset Loading & Performance",
+      "description": "Assets must be lazy-loaded or optimized for minimal performance impact. Use `loading='lazy'` for non-critical images. Use responsive images (`srcset`, `sizes`) when necessary. Never import images directly into TypeScript/React files unless absolutely necessary (use public folder references).",
+      "rationale": "Lazy loading defers off-screen image loading, improving initial page load. Responsive images serve appropriately sized images for each viewport, reducing unnecessary bandwidth usage.",
+      "badExample": {
+        "code": "// ❌ BAD: Eager loading large images\nimport heroImage from './hero.png';\n\nfunction Hero() {\n  return <img src={heroImage} alt=\"Hero\" />;\n}",
+        "problems": [
+          "Large images loaded immediately",
+          "Delays page interactivity",
+          "Wastes bandwidth for off-screen content"
+        ]
+      },
+      "goodExample": {
+        "code": "// ✅ GOOD: Lazy loading with responsive images\nfunction Hero() {\n  return (\n    <img\n      src=\"/assets/images/hero.webp\"\n      srcSet=\"/assets/images/hero-400.webp 400w,\n              /assets/images/hero-800.webp 800w,\n              /assets/images/hero-1200.webp 1200w\"\n      sizes=\"(max-width: 600px) 400px, (max-width: 900px) 800px, 1200px\"\n      alt=\"Hero\"\n      loading=\"lazy\"\n    />\n  );\n}",
+        "benefits": [
+          "Browser loads optimal image size",
+          "Lazy loading reduces initial payload",
+          "Better Core Web Vitals scores"
+        ]
+      }
+    }
+  ]
+}

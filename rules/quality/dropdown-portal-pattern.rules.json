@@ -1,0 +1,119 @@
+{
+  "ruleSet": {
+    "name": "Dropdown Portal Pattern",
+    "version": "1.0.0",
+    "description": "Ensures consistent implementation of dropdown components using React portals for proper rendering and accessibility"
+  },
+  "rules": [
+    {
+      "id": "DPP-001",
+      "RULE": "Always use React portals for dropdown menus to ensure proper stacking context",
+      "EXAMPLE": {
+        "good": "// ✅ Correct: Portal-based dropdown\nconst DropdownMenu = ({ children }) => {\n  return createPortal(\n    <div className=\"dropdown-menu\">{children}</div>,\n    document.body\n  );\n};",
+        "bad": "// ❌ Wrong: Inline dropdown without portal\nconst DropdownMenu = ({ children }) => {\n  return <div className=\"dropdown-menu\">{children}</div>;\n};"
+      },
+      "SEVERITY": "error",
+      "CONTEXT": "Dropdowns rendered inline can be clipped by parent containers with overflow:hidden or z-index constraints. This causes usability issues where dropdowns are partially visible or completely hidden.",
+      "REASONING": "Portals escape the DOM hierarchy, allowing dropdowns to render at the document root level. This ensures they always appear above other content and are never clipped by parent container styles. The performance overhead is minimal compared to the reliability gained."
+    },
+    {
+      "id": "DPP-002",
+      "RULE": "Position dropdowns dynamically using reference element coordinates with getBoundingClientRect",
+      "EXAMPLE": {
+        "good": "// ✅ Correct: Dynamic positioning\nconst positionDropdown = (triggerRef, dropdownRef) => {\n  const trigger = triggerRef.current?.getBoundingClientRect();\n  const dropdown = dropdownRef.current;\n  if (!trigger || !dropdown) return;\n  \n  dropdown.style.top = `${trigger.bottom + window.scrollY}px`;\n  dropdown.style.left = `${trigger.left + window.scrollX}px`;\n};",
+        "bad": "// ❌ Wrong: Fixed positioning\nconst DropdownMenu = () => (\n  <div className=\"dropdown\" style={{ position: 'fixed', top: '100px' }}>\n    {/* Content */}\n  </div>\n);"
+      },
+      "SEVERITY": "error",
+      "CONTEXT": "Fixed positioning breaks when the trigger element scrolls or when the page has non-standard layout structures. Users lose context when dropdowns appear disconnected from their trigger elements.",
+      "REASONING": "Dynamic positioning calculates the exact coordinates at render time, accounting for scroll position, container offsets, and viewport boundaries. This ensures the dropdown always appears adjacent to its trigger regardless of page scroll state or layout complexity."
+    },
+    {
+      "id": "DPP-003",
+      "RULE": "Implement flip middleware to reposition dropdowns that would overflow viewport boundaries",
+      "EXAMPLE": {
+        "good": "// ✅ Correct: Using flip middleware\nimport { computePosition, flip, shift } from '@floating-ui/dom';\n\nconst updatePosition = async (reference, floating) => {\n  const { x, y } = await computePosition(reference, floating, {\n    middleware: [flip(), shift({ padding: 8 })]\n  });\n  return { x, y };\n};",
+        "bad": "// ❌ Wrong: No boundary detection\nconst positionDropdown = (trigger, dropdown) => {\n  dropdown.style.top = trigger.bottom;\n  dropdown.style.left = trigger.left;\n  // Dropdown can render off-screen\n};"
+      },
+      "SEVERITY": "error",
+      "CONTEXT": "Users with smaller screens or zoomed browsers frequently encounter dropdowns that extend beyond the viewport edge. Critical actions become inaccessible, requiring users to scroll the page while keeping the dropdown open.",
+      "REASONING": "Flip middleware automatically detects viewport collisions and repositions the dropdown to the opposite side of the trigger. Shift middleware keeps it within viewport padding. Together they ensure 100% accessibility regardless of screen size or zoom level."
+    },
+    {
+      "id": "DPP-004",
+      "RULE": "Close dropdowns when clicking outside using document-level event listeners with proper cleanup",
+      "EXAMPLE": {
+        "good": "// ✅ Correct: Proper cleanup pattern\nuseEffect(() => {\n  const handleClickOutside = (event) => {\n    if (dropdownRef.current && !dropdownRef.current.contains(event.target)) {\n      onClose();\n    }\n  };\n  \n  document.addEventListener('mousedown', handleClickOutside);\n  return () => document.removeEventListener('mousedown', handleClickOutside);\n}, [onClose]);",
+        "bad": "// ❌ Wrong: Missing cleanup\nuseEffect(() => {\n  document.addEventListener('click', (e) => {\n    if (!dropdownRef.current?.contains(e.target)) onClose();\n  });\n  // Missing cleanup function - memory leak!\n}, []);"
+      },
+      "SEVERITY": "error",
+      "CONTEXT": "Dropdowns that don't close when clicking elsewhere create confusing UX states. Multiple dropdowns can remain open simultaneously. Memory leaks from uncleaned event listeners degrade application performance over time.",
+      "REASONING": "Document-level listeners capture all clicks, enabling detection of outside clicks. Cleanup in the useEffect return prevents memory leaks when components unmount. Using mousedown instead of click provides faster response and prevents selection issues."
+    },
+    {
+      "id": "DPP-005",
+      "RULE": "Manage focus by focusing the dropdown on open and returning focus to trigger on close",
+      "EXAMPLE": {
+        "good": "// ✅ Correct: Focus management\nuseEffect(() => {\n  if (isOpen) {\n    dropdownRef.current?.focus();\n  } else if (triggerRef.current) {\n    triggerRef.current.focus();\n  }\n}, [isOpen]);\n\nreturn (\n  <div ref={dropdownRef} tabIndex={-1} role=\"menu\">\n    {items}\n  </div>\n);",
+        "bad": "// ❌ Wrong: No focus handling\nconst Dropdown = ({ isOpen }) => (\n  isOpen && <div className=\"dropdown\">{items}</div>\n);"
+      },
+      "SEVERITY": "warning",
+      "CONTEXT": "Screen reader users lose context when dropdowns open without focus shift. Keyboard users cannot navigate dropdown items. Returning focus to an unexpected element after close disorients all users.",
+      "REASONING": "Focus management creates a logical tab order that matches visual order. Screen readers announce the dropdown when focused. Returning focus to the trigger provides a predictable navigation pattern that matches user mental models of UI interaction."
+    },
+    {
+      "id": "DPP-006",
+      "RULE": "Implement keyboard navigation with Arrow keys, Enter to select, and Escape to close",
+      "EXAMPLE": {
+        "good": "// ✅ Correct: Full keyboard support\nconst handleKeyDown = (e) => {\n  switch (e.key) {\n    case 'ArrowDown':\n      e.preventDefault();\n      focusNextItem();\n      break;\n    case 'ArrowUp':\n      e.preventDefault();\n      focusPrevItem();\n      break;\n    case 'Enter':\n      selectItem(focusedIndex);\n      break;\n    case 'Escape':\n      onClose();\n      break;\n  }\n};",
+        "bad": "// ❌ Wrong: Mouse-only implementation\nconst DropdownItem = ({ onClick, children }) => (\n  <div onClick={onClick}>{children}</div>\n);"
+      },
+      "SEVERITY": "error",
+      "CONTEXT": "Keyboard-only users cannot access dropdown functionality when keyboard navigation is absent. This violates WCAG 2.1 Level A (2.1.1 Keyboard) and blocks accessibility compliance. Power users prefer keyboard shortcuts for speed.",
+      "REASONING": "Arrow key navigation follows ARIA menu patterns that assistive technology users expect. Preventing default on arrow keys stops page scrolling. Escape provides a consistent close mechanism across all dropdowns in the application."
+    },
+    {
+      "id": "DPP-007",
+      "RULE": "Add ARIA attributes: role='menu', role='menuitem', aria-expanded, and aria-haspopup to trigger",
+      "EXAMPLE": {
+        "good": "// ✅ Correct: Proper ARIA attributes\n<button\n  aria-expanded={isOpen}\n  aria-haspopup=\"menu\"\n  onClick={toggle}\n>\n  Menu\n</button>\n\n{isOpen && (\n  <div role=\"menu\" aria-label=\"Actions\">\n    <button role=\"menuitem\">Edit</button>\n    <button role=\"menuitem\">Delete</button>\n  </div>\n)}",
+        "bad": "// ❌ Wrong: Missing ARIA\n<button onClick={toggle}>Menu</button>\n{isOpen && (\n  <div>\n    <button>Edit</button>\n    <button>Delete</button>\n  </div>\n)}"
+      },
+      "SEVERITY": "error",
+      "CONTEXT": "Screen readers cannot identify dropdown relationships without ARIA attributes. Users don't know if a button opens a menu. The dropdown structure is not communicated, making navigation impossible for assistive technology users.",
+      "REASONING": "ARIA attributes expose the dropdown's semantic structure to the accessibility tree. aria-expanded communicates state. aria-haspopup预告s behavior. role attributes identify interactive elements and their relationships. This enables screen reader users to navigate efficiently."
+    },
+    {
+      "id": "DPP-008",
+      "RULE": "Use consistent z-index hierarchy: modals > dropdowns > tooltips > content (e.g., 1000 > 900 > 800 > 1)",
+      "EXAMPLE": {
+        "good": "// ✅ Correct: Design system tokens\n// tailwind.config.js\nmodule.exports = {\n  theme: {\n    zIndex: {\n      'content': '1',\n      'tooltip': '800',\n      'dropdown': '900',\n      'modal': '1000',\n    }\n  }\n};\n\n// Usage\n<div className=\"z-dropdown\">...</div>",
+        "bad": "// ❌ Wrong: Inconsistent z-index values\n.dropdown-menu { z-index: 9999; }\n.modal { z-index: 100; }\n.tooltip { z-index: 5000; }"
+      },
+      "SEVERITY": "warning",
+      "CONTEXT": "Inconsistent z-index values cause unpredictable stacking. Dropdowns appear behind content, or above modals when they shouldn't. Developers resort to extreme values (999999) which become unmaintainable.",
+      "REASONING": "A documented z-index hierarchy creates predictable stacking behavior. Gaps between levels (100 points) allow future additions. Using design tokens prevents magic numbers and makes the system self-documenting. Conflicts become impossible when everyone follows the hierarchy."
+    },
+    {
+      "id": "DPP-009",
+      "RULE": "Prevent body scroll when dropdown is open to avoid background scroll issues",
+      "EXAMPLE": {
+        "good": "// ✅ Correct: Scroll lock with cleanup\nuseEffect(() => {\n  if (isOpen) {\n    const scrollY = window.scrollY;\n    document.body.style.position = 'fixed';\n    document.body.style.top = `-${scrollY}px`;\n    \n    return () => {\n      document.body.style.position = '';\n      document.body.style.top = '';\n      window.scrollTo(0, scrollY);\n    };\n  }\n}, [isOpen]);",
+        "bad": "// ❌ Wrong: No scroll prevention\nconst Dropdown = ({ isOpen }) => (\n  isOpen && <div className=\"dropdown\">...</div>\n);"
+      },
+      "SEVERITY": "warning",
+      "CONTEXT": "Mobile users accidentally scroll the background when interacting with dropdowns. The page jumps unexpectedly. On iOS Safari, the rubber-band effect can dismiss dropdowns unintentionally. Desktop users can lose their place in long pages.",
+      "REASONING": "Body scroll lock keeps focus on the dropdown content. The fixed position technique preserves scroll position for restoration. Cleanup ensures scroll is re-enabled even if the component unmounts while the dropdown is open. This creates a modal-like experience for dropdowns."
+    },
+    {
+      "id": "DPP-010",
+      "RULE": "Animate dropdown entrance/exit with transform and opacity for smooth transitions",
+      "EXAMPLE": {
+        "good": "// ✅ Correct: CSS animations\n.dropdown-enter {\n  opacity: 0;\n  transform: translateY(-8px) scale(0.95);\n}\n.dropdown-enter-active {\n  opacity: 1;\n  transform: translateY(0) scale(1);\n  transition: all 150ms ease-out;\n}\n.dropdown-exit {\n  opacity: 1;\n  transform: translateY(0) scale(1);\n}\n.dropdown-exit-active {\n  opacity: 0;\n  transform: translateY(-8px) scale(0.95);\n  transition: all 150ms ease-in;\n}",
+        "bad": "// ❌ Wrong: Instant appearance\nconst Dropdown = ({ isOpen }) => (\n  isOpen ? <div className=\"dropdown\">...</div> : null\n);"
+      },
+      "SEVERITY": "info",
+      "CONTEXT": "Dropdowns that appear instantly feel jarring and cheap. Users lose visual continuity between the trigger and the appearing content. The sudden appearance can be disorienting, especially for users with cognitive disabilities.",
+      "REASONING": "Transform animations are GPU-accelerated and performant. Small scale and translate values create a 'growing' effect from the trigger. Fade transitions provide visual continuity. Keeping animations under 200ms prevents user perception of delay. The animation provides affordance that the dropdown is connected to the trigger."
+    }
+  ]
+}

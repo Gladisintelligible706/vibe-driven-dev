@@ -30,11 +30,10 @@
     "dist",
     "node_modules",
     "tests",
-    "archive",
+    "Bin",
     "docs",
     "skills",
     "agents",
-    "packs",
     "templates"
   ]
 }

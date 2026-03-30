@@ -308,7 +308,7 @@ describe("RouterEngine — valid transitions", () => {
     expect(result.warnings.some((warning) => warning.includes("re-run /vibe.scaffold --accept-model-upgrade"))).toBe(true);
     expect(result.nextRecommendedCommand).toBe("/vibe.qa");
     expect(result.humanNextStep).toEqual([
-      "Switch model to the latest active Anthropic flagship available to you, or GPT-5.4/Codex with xhigh reasoning.",
+      "Switch model to Claude Opus 4.6 where available, Codex on GPT-5.4 or GPT-5.4 with xhigh reasoning, or Gemini 3.1 Pro.",
       "Re-run /vibe.scaffold --accept-model-upgrade to generate PRD.full.md.",
       "Otherwise continue to /vibe.qa with draft PRD truth only."
     ]);

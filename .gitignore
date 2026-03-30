@@ -5,3 +5,5 @@ dist/
 .env
 .vdd/project-state.json
 .vdd/install-manifest.json
+Bin/
+

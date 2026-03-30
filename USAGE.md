@@ -54,6 +54,7 @@ vdd run /vibe.handoff-to-spec
 | `/vibe.blueprint` | blueprint | Produce architecture and stack decisions |
 | `/vibe.detail` | detail | Technical detail for each system component |
 | `/vibe.scaffold` | scaffold | Generate repository bootstrap files |
+| `/vibe.audit` | audit | Scan codebase against canonical rules, generate issues and remediation plan |
 | `/vibe.qa` | qa | Verify readiness before handoff |
 | `/vibe.handoff-to-spec` | handoff | Transfer ownership to execution runtime |
 
@@ -402,7 +403,7 @@ Or explicitly accept the stronger-model path for the deeper PRD artifact:
 vdd run /vibe.scaffold --accept-model-upgrade
 ```
 
-When the stronger-model path is deferred, scaffold now returns an explicit handoff prompt telling the user to switch to the latest active Anthropic flagship available to them, or GPT-5.4/Codex with `xhigh` reasoning, then re-run scaffold. The router also returns `nextRecommendedCommand: /vibe.qa` plus a `humanNextStep` list that makes the tradeoff explicit.
+When the stronger-model path is deferred, scaffold now returns an explicit handoff prompt telling the user to switch to Claude Opus 4.6 where available, Codex on GPT-5.4 or GPT-5.4 with `xhigh` reasoning, or Gemini 3.1 Pro, then re-run scaffold. The router also returns `nextRecommendedCommand: /vibe.qa` plus a `humanNextStep` list that makes the tradeoff explicit.
 
 These files are the handoff artifacts. They are the source of truth for the execution agent.
 
@@ -477,7 +478,78 @@ VDD's job is done.
 
 ---
 
-## 9. CLI Reference
+## 9. Code Audit & Remediation
+
+`/vibe.audit` scans your codebase against the canonical rules defined in `rules/RULES_INDEX.json` and produces a full audit with structured issues, workstream grouping, and sprint-based execution plans.
+
+### Run a full audit
+
+```bash
+vdd audit
+```
+
+### Run a focused audit
+
+```bash
+vdd audit --focus architecture    # Circular deps, dependency flow, component size
+vdd audit --focus testing         # Missing tests, coverage gaps
+vdd audit --focus security        # Hardcoded secrets, missing .env.example
+vdd audit --focus performance     # Large components, bundle concerns
+vdd audit --focus events          # Event architecture, lifecycle, tracking
+vdd audit --focus accessibility   # Missing alt text, ARIA labels
+```
+
+### Output modes
+
+```bash
+vdd audit --mode full       # All 4 artifacts (default)
+vdd audit --mode report     # Audit-Report.md only
+vdd audit --mode fix-plan   # Refactor-Plan.md only
+vdd audit --mode sprints    # Sprint-Plan.md only
+```
+
+### What it detects
+
+| Module | Checks for |
+|---|---|
+| Circular imports | Import cycles via DFS dependency graph |
+| Component size | Files exceeding 250 lines |
+| Missing tests | Source files without corresponding `.test.` / `.spec.` files |
+| Security | Hardcoded API keys, connection strings, secrets |
+| Accessibility | Missing `alt` attributes, missing ARIA labels |
+| Error handling | Missing ErrorBoundary, unprotected async functions |
+| Type safety | Excessive `any` usage in TypeScript files |
+| Dependencies | Deprecated or duplicate packages |
+
+### Generated artifacts
+
+Four files are written to `audit-artifacts/<timestamp>/`:
+
+| File | Format | Contains |
+|---|---|---|
+| `Audit-Report.md` | Markdown | Executive summary, repo profile, risk level, top findings with evidence |
+| `Audit-Issues.json` | JSON | Machine-readable issues with severity, category, rule source, evidence, remediation |
+| `Refactor-Plan.md` | Markdown | Workstream grouping with effort estimates, dependencies, and success criteria |
+| `Sprint-Plan.md` | Markdown | 3-sprint execution roadmap with issue assignments and effort summary |
+
+### Audit engine architecture
+
+The audit system is modular, located in `core/audit/`:
+
+```
+core/audit/
+  types.ts                   -- shared types (AuditIssue, SprintPlan, RepositoryProfile, etc.)
+  rule-loader.ts             -- loads RULES_INDEX.json, selects rules by project profile
+  repository-profiler.ts     -- detects project type, frameworks, features
+  codebase-auditor.ts        -- orchestrator + 8 detection modules
+  issue-generator.ts         -- converts raw findings to structured issues
+  sprint-planner.ts          -- groups issues into workstreams and sprints
+  report-writer.ts           -- generates all 4 output artifacts
+```
+
+---
+
+## 10. CLI Reference
 
 ```bash
 # Installation
@@ -491,6 +563,19 @@ vdd init                                       # Initialize project state
 vdd run <command>                              # Run a VDD journey command
 vdd status                                     # Show current stage and readiness
 vdd doctor                                     # Full environment health check
+
+# Code audit
+vdd audit                                      # Run full codebase audit
+vdd audit --focus architecture                 # Audit architecture rules only
+vdd audit --focus testing                      # Audit testing rules only
+vdd audit --focus security                     # Audit security rules only
+vdd audit --focus performance                  # Audit performance rules only
+vdd audit --focus events                       # Audit event/lifecycle rules only
+vdd audit --focus accessibility                # Audit accessibility rules only
+vdd audit --mode report                        # Generate report only
+vdd audit --mode fix-plan                      # Generate fix plan only
+vdd audit --mode sprints                       # Generate sprint plan only
+vdd audit --verbose                            # Show detailed progress
 
 # Source management
 vdd scan                                       # Discover all agents and skills
